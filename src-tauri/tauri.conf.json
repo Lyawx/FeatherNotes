@@ -12,9 +12,10 @@
   "app": {
     "windows": [
       {
-        "title": "feathernotes",
-        "width": 800,
-        "height": 600
+        "title": "FeatherNotes",
+        "width": 1600,
+        "height": 900,
+        "preventOverflow": true
       }
     ],
     "security": {
