@@ -11,3 +11,8 @@ I want to create a free personal workspace, with AI capabilities, to help everyo
 - [x] ~~Ollama start stop and Status in the app.~~
 - [x] ~~Communication with chosen model through Ollama.~~
 - [x] ~~Custom ollama path setting with save.~~
+- [ ] UI coherence, Button coherence, css simplification and class simplification.
+- [ ] Light theme/Dark Theme
+- [ ] Configure file navigation/display for each tab of the app
+- [ ] Clean up and precise the ai response formatting and use it to save the files to be readable
+- [ ] Custom save file path in the settings
