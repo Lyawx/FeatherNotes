@@ -8,5 +8,6 @@ I want to create a free personal workspace, with AI capabilities, to help everyo
 
 ## Roadmap
 - [x] ~~Create the github~~
-- [ ] Have the ability to communicate with any AI assistant and keep chat history.
-- [ ] Add instructions for the AI to output answers and note resumes in a specific format we can then use to write our files.
+- [x] ~~Ollama start stop and Status in the app.~~
+- [x] ~~Communication with chosen model through Ollama.~~
+- [x] ~~Custom ollama path setting with save.~~
