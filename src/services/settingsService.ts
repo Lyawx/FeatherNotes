@@ -1,15 +1,20 @@
 import { invoke } from "@tauri-apps/api/core";
 
-// Explicitly export the interface so other services/components can use it
-export interface AppSettings {
-  ollama: {
+export interface OllamaSettings {
+    ollama_default_path: string;
     ollama_custom_path: string;
     ollama_use_custom_path: boolean;
-  };
-  markdown: {
+}
+
+export interface MarkdownSettings {
+    markdown_default_path: string;
     markdown_custom_path: string;
     markdown_use_custom_path: boolean;
-  };
+}
+
+export interface AppSettings {
+    ollama: OllamaSettings;
+    markdown: MarkdownSettings;
 }
 
 export const settingsService = {

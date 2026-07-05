@@ -5,17 +5,19 @@ import { mainService } from "../services/mainService";
 import type { AppSettings } from "../services/settingsService";
 import type { OllamaStatus } from "../services/ollamaService";
 
-const props = defineProps<{ ollamaStatus: string }>(); 
+const props = defineProps<{ ollamaStatus: string }>();
 const emit = defineEmits<{ (e: 'updateStatus', status: OllamaStatus): void }>();
 
 const appSettings = ref<AppSettings>({
-  ollama: { 
-    ollama_custom_path: "", 
-    ollama_use_custom_path: false 
+  ollama: {
+    ollama_default_path: "",
+    ollama_custom_path: "",
+    ollama_use_custom_path: false
   },
-  markdown: { 
-    markdown_custom_path: "", 
-    markdown_use_custom_path: false 
+  markdown: {
+    markdown_default_path: "",
+    markdown_custom_path: "",
+    markdown_use_custom_path: false
   }
 });
 
@@ -53,10 +55,10 @@ const stopOllama = async () => {
 const browsePath = async (target: 'ollama' | 'markdown') => {
   try {
     const isDirectory = target === 'markdown'; // true pour dossier (markdown), false pour fichier (ollama)
-    
-    const selected = await open({ 
-      multiple: false, 
-      directory: isDirectory 
+
+    const selected = await open({
+      multiple: false,
+      directory: isDirectory
     });
 
     if (selected && typeof selected === 'string') {
@@ -67,8 +69,8 @@ const browsePath = async (target: 'ollama' | 'markdown') => {
       }
       await saveSettings();
     }
-  } catch (err) { 
-    console.error(`Failed to browse path for ${target}:`, err); 
+  } catch (err) {
+    console.error(`Failed to browse path for ${target}:`, err);
   }
 };
 </script>
@@ -90,7 +92,8 @@ const browsePath = async (target: 'ollama' | 'markdown') => {
       </div>
 
       <div class="input-group">
-        <input type="text" v-model="appSettings.ollama.ollama_custom_path" placeholder="Currently using default binary path."
+        <input type="text" v-model="appSettings.ollama.ollama_custom_path"
+          :placeholder="appSettings.ollama.ollama_default_path || 'Recherche du chemin par défaut...'"
           :disabled="!appSettings.ollama.ollama_use_custom_path" @change="saveSettings" class="text-input-field" />
         <button id="browse-path-btn" class="base-btn" @click="browsePath('ollama')"
           :disabled="!appSettings.ollama.ollama_use_custom_path">
@@ -123,15 +126,11 @@ const browsePath = async (target: 'ollama' | 'markdown') => {
       </div>
 
       <div class="input-group">
-        <input 
-          type="text" 
-          v-model="appSettings.markdown.markdown_custom_path"
-          placeholder="Currently using default vault path." 
-          :disabled="!appSettings.markdown.markdown_use_custom_path"
-          @change="saveSettings" 
-          class="text-input-field" 
-        />
-        <button id="browse-md-btn" class="base-btn" @click="browsePath('markdown')" :disabled="!appSettings.markdown.markdown_use_custom_path">
+        <input type="text" v-model="appSettings.markdown.markdown_custom_path"
+          :placeholder="appSettings.markdown.markdown_default_path || 'Recherche du dossier par défaut...'"
+          :disabled="!appSettings.markdown.markdown_use_custom_path" @change="saveSettings" class="text-input-field" />
+        <button id="browse-md-btn" class="base-btn" @click="browsePath('markdown')"
+          :disabled="!appSettings.markdown.markdown_use_custom_path">
           Browse...
         </button>
       </div>
@@ -154,7 +153,6 @@ const browsePath = async (target: 'ollama' | 'markdown') => {
 .input-group {
   display: flex;
   gap: 0.5rem;
-  max-width: 500px;
 }
 
 #settings-action-block {

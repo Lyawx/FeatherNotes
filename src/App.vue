@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted } from "vue";
 import SvgIcon from './components/SvgIcon.vue';
 import AiTab from './components/AiTab.vue';
 import SettingsTab from './components/SettingsTab.vue';
+import LogbookTab from "./components/LogbookTab.vue";
 import { mainService, type OllamaStatus } from "./services/mainService";
 
 interface Tab {
@@ -93,8 +94,9 @@ onUnmounted(() => {
     <main class="main-content">
       <AiTab v-if="activeTab === 'ai'" :ollamaStatus="ollamaStatus" @triggerStart="handleForcedStart" />
 
-      <SettingsTab v-else-if="activeTab === 'settings'" :ollamaStatus="ollamaStatus"
-        @updateStatus="ollamaStatus = $event" />
+      <SettingsTab v-else-if="activeTab === 'settings'" :ollamaStatus="ollamaStatus" @updateStatus="ollamaStatus = $event" />
+
+      <LogbookTab v-else-if="activeTab === 'logbook'" />
 
       <div class="tab-panel" v-else>
         <h1>{{mainTabs.find(t => t.id === activeTab)?.label}}</h1>
@@ -240,7 +242,7 @@ p {
 
 /* --- TWO CONCRETE STANDALONE CONTAINERS --- */
 .container-light {
-  background-color: #242424;
+  background-color: #1a1a1a;
   border: 1px solid #333333;
   border-radius: 8px;
   padding: 1.5rem;
@@ -251,7 +253,7 @@ p {
 }
 
 .container-dark {
-  background-color: #1d1d1d;
+  background-color: #141414;
   border: 1px solid #333333;
   border-radius: 8px;
   padding: 1.5rem;
@@ -452,5 +454,35 @@ input:checked+.ui-toggle-slider:before {
   font-weight: 600;
   color: #fff;
   text-transform: capitalize;
+}
+
+/* --- MARLDOWN STYLE --- */
+.markdown-body :deep(h1) {
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
+  color: #fff;
+}
+
+.markdown-body :deep(h2) {
+  font-size: 1.4rem;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: #fff;
+}
+
+.markdown-body :deep(p) {
+  margin-bottom: 1rem;
+  line-height: 1.6;
+  color: #d1d5db;
+}
+
+.markdown-body :deep(ul) {
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+  color: #d1d5db;
+}
+
+.markdown-body :deep(li) {
+  margin-bottom: 0.25rem;
 }
 </style>

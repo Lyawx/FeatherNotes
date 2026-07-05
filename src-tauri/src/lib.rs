@@ -1,4 +1,4 @@
-pub mod jhelper;
+pub mod helper;
 pub mod settings;
 pub mod ollama;
 
@@ -15,7 +15,10 @@ pub fn run() {
             ollama::status::start_ollama_process,
             ollama::status::stop_ollama_process,
             ollama::rq::fetch_models,
-            ollama::rq::process_brain_dump
+            ollama::rq::process_brain_dump,
+            helper::mdhelper::convert_md_to_html,
+            helper::mdhelper::get_vault_tree,
+            helper::mdhelper::create_vault_directory
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

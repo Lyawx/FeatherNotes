@@ -1,6 +1,7 @@
 // Import sibling services from the same directory
 import { settingsService } from "./settingsService";
 import { ollamaService } from "./ollamaService";
+import { logbookService } from "./logbookService";
 // Import window positioning capabilities from the Tauri plugin
 import { moveWindow, Position } from '@tauri-apps/plugin-positioner';
 
@@ -11,6 +12,7 @@ export type { OllamaStatus } from "./ollamaService";
 export const mainService = {
   settings: settingsService,
   ollama: ollamaService,
+  logbook: logbookService,
 
   // --- WINDOW MANAGEMENT ---
   // Centers the primary application window viewport on the desktop screen
