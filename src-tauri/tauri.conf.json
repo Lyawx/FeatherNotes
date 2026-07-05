@@ -15,7 +15,8 @@
         "title": "FeatherNotes",
         "width": 1600,
         "height": 900,
-        "preventOverflow": true
+        "preventOverflow": true,
+        "resizable": false
       }
     ],
     "security": {
