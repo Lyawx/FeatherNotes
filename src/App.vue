@@ -1,30 +1,31 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from "vue";
+import { computed } from 'vue';
 import SvgIcon from './components/SvgIcon.vue';
 import AiTab from './components/AiTab.vue';
 import SettingsTab from './components/SettingsTab.vue';
 import LogbookTab from "./components/LogbookTab.vue";
-import { MainService, type OllamaStatus } from "./services/mainService";
+import TaskTab from "./components/TaskTab.vue";
+import { mainService, type OllamaStatus } from "./services/mainService";
 
-interface Tab {
-  id: 'ai' | 'logbook' | 'lifewiki' | 'tasks' | 'health' | 'settings';
-  label: string;
-  icon: string;
-}
+type TabName = 'ai' | 'settings' | 'logbook' | 'tasks';
+const activeTab = ref<TabName>('ai');
 
-const activeTab = ref<Tab['id']>('ai');
+// 1. L'objet contenant uniquement tes COMPOSANTS pour le <component :is>
+const tabComponents: Record<TabName, any> = {
+  ai: AiTab,
+  settings: SettingsTab,
+  logbook: LogbookTab,
+  tasks: TaskTab
+};
 
-// Standard main navigation tabs
-const mainTabs: Tab[] = [
-  { id: 'ai', label: 'AI Assistant', icon: 'ai' },
-  { id: 'logbook', label: 'Logbook', icon: 'logbook' },
-  { id: 'lifewiki', label: 'LifeWiki', icon: 'lifewiki' },
-  { id: 'tasks', label: 'Tasks', icon: 'tasks' },
-  { id: 'health', label: 'Mental Health', icon: 'health' }
+const currentTabComponent = computed(() => tabComponents[activeTab.value]);
+
+const navigationTabs = [
+  { id: 'ai', icon: 'ai' },
+  { id: 'logbook', icon: 'logbook' },
+  { id: 'tasks', icon: 'tasks' }
 ];
-
-// Isolated settings tab for layout positioning
-const settingsTab: Tab = { id: 'settings', label: 'Settings', icon: 'settings' };
 
 const ollamaStatus = ref<OllamaStatus>('connecting');
 let statusInterval: number | null = null;
@@ -32,7 +33,7 @@ let statusInterval: number | null = null;
 const checkHeartbeat = async () => {
   if (ollamaStatus.value === 'connecting') return;
   try {
-    const isAlive = await MainService.ollama.checkStatus();
+    const isAlive = await mainService.ollama.checkStatus();
     ollamaStatus.value = isAlive ? 'connected' : 'disconnected';
   } catch {
     ollamaStatus.value = 'disconnected';
@@ -43,10 +44,10 @@ const handleForcedStart = async () => {
   if (ollamaStatus.value !== 'disconnected') return;
   ollamaStatus.value = 'connecting';
   try {
-    await MainService.ollama.startProcess();
+    await mainService.ollama.startProcess();
     for (let i = 0; i < 20; i++) {
       await new Promise(resolve => setTimeout(resolve, 500));
-      if (await MainService.ollama.checkStatus()) {
+      if (await mainService.ollama.checkStatus()) {
         ollamaStatus.value = 'connected';
         return;
       }
@@ -58,9 +59,9 @@ const handleForcedStart = async () => {
 };
 
 onMounted(async () => {
-  await MainService.centerWindow();
+  await mainService.centerWindow();
   try {
-    const isAlive = await MainService.ollama.checkStatus();
+    const isAlive = await mainService.ollama.checkStatus();
     ollamaStatus.value = isAlive ? 'connected' : 'disconnected';
   } catch {
     ollamaStatus.value = 'disconnected';
@@ -78,41 +79,27 @@ onUnmounted(() => {
     <aside class="sidebar-left">
       <nav class="nav-links">
         <div class="main-nav-group">
-          <button v-for="tab in mainTabs" :key="tab.id" :class="['nav-btn', { active: activeTab === tab.id }]"
-            @click="activeTab = tab.id">
+          <button v-for="tab in navigationTabs" :key="tab.id" :class="['nav-btn', { active: activeTab === tab.id }]"
+            @click="activeTab = tab.id as TabName">
             <SvgIcon :name="tab.icon" class="tab-icon" />
           </button>
         </div>
 
-        <button :class="['nav-btn', 'settings-nav-btn', { active: activeTab === settingsTab.id }]"
-          @click="activeTab = settingsTab.id">
-          <SvgIcon :name="settingsTab.icon" class="tab-icon" />
+        <button :class="['nav-btn', 'settings-nav-btn', { active: activeTab === 'settings' }]"
+          @click="activeTab = 'settings'">
+          <SvgIcon name="settings" class="tab-icon" />
         </button>
       </nav>
     </aside>
 
     <main class="main-content">
-      <AiTab v-if="activeTab === 'ai'" :ollamaStatus="ollamaStatus" @triggerStart="handleForcedStart" />
-
-      <SettingsTab v-else-if="activeTab === 'settings'" :ollamaStatus="ollamaStatus" @updateStatus="ollamaStatus = $event" />
-
-      <LogbookTab v-else-if="activeTab === 'logbook'" />
-
-      <div class="tab-panel" v-else>
-        <h1>{{mainTabs.find(t => t.id === activeTab)?.label}}</h1>
-        <div class="container-light">
-          <p>This is a light container block.</p>
-          <div class="container-dark">
-            <p>This is an embedded dark container block.</p>
-          </div>
-        </div>
-      </div>
+      <component :is="currentTabComponent" :ollamaStatus="ollamaStatus" @triggerStart="handleForcedStart"
+        @updateStatus="ollamaStatus = $event" />
     </main>
   </div>
 </template>
 
 <style>
-
 * {
   margin: 0;
   padding: 0;
@@ -385,12 +372,12 @@ p {
   border-radius: 50%;
 }
 
-input:checked + .ui-toggle-slider {
+input:checked+.ui-toggle-slider {
   background-color: var(--color-blue);
   border-color: var(--color-blue-dark);
 }
 
-input:checked + .ui-toggle-slider:before {
+input:checked+.ui-toggle-slider:before {
   transform: translateX(20px);
   background-color: var(--text-00);
 }
@@ -441,6 +428,7 @@ input:checked + .ui-toggle-slider:before {
   0% {
     transform: translateX(-100%);
   }
+
   100% {
     transform: translateX(200%);
   }
@@ -480,5 +468,4 @@ input:checked + .ui-toggle-slider:before {
   color: var(--text-00);
   text-transform: capitalize;
 }
-
 </style>

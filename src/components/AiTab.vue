@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from "vue";
-import { MainService } from "../services/mainService";
+import { mainService } from "../services/mainService";
 import type { OllamaStatus } from "../services/ollamaService";
 
 const props = defineProps<{ ollamaStatus: OllamaStatus }>();
@@ -20,7 +20,7 @@ watch(() => props.ollamaStatus, (newStatus) => {
 
 const fetchModels = async () => {
     try {
-        const models = await MainService.ollama.fetchModels();
+        const models = await mainService.ollama.fetchModels();
         installedModels.value = models;
         if (models.length > 0 && !selectedModel.value) selectedModel.value = models[0];
     } catch (err) { console.error(err); }
@@ -31,7 +31,7 @@ const submitBrainDump = async () => {
     isProcessing.value = true;
     aiResult.value = "";
     try {
-        aiResult.value = await MainService.ollama.submitBrainDump(selectedModel.value, userInput.value);
+        aiResult.value = await mainService.ollama.submitBrainDump(selectedModel.value, userInput.value);
     } catch (error) { aiResult.value = "Error: " + error; }
     finally { isProcessing.value = false; }
 };

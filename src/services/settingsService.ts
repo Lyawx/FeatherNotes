@@ -13,12 +13,14 @@ export interface MarkdownSettings {
 }
 
 export interface AppSettings {
-  theme: string; // <-- On ajoute le champ ici pour TypeScript
+  theme: string;
   ollama: OllamaSettings;
   markdown: MarkdownSettings;
+  urgent_threshold_days: number;
+  warning_threshold_days: number;
 }
 
-export const settingsService = { // <-- Minuscule respectée
+export const settingsService = {
   async loadSettings(): Promise<AppSettings> {
     return await invoke<AppSettings>('load_app_settings');
   },

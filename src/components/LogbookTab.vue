@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import { MainService } from "../services/mainService";
+import { mainService } from "../services/mainService";
 import type { FileNode } from "../services/logbookService";
 import MarkdownEditor from "./MarkdownEditor.vue";
 
@@ -14,7 +14,7 @@ const isEditing = ref<boolean>(false);
 const loadLogbook = async () => {
   isLoading.value = true;
   try {
-    mdFiles.value = await MainService.logbook.getLogbookFiles();
+    mdFiles.value = await mainService.logbook.getLogbookFiles();
     // Optionnel : Sélectionne automatiquement le premier fichier s'il y en a un
     if (mdFiles.value.length > 0) {
       selectFile(mdFiles.value[0]);
@@ -30,7 +30,7 @@ const selectFile = async (file: FileNode) => {
   activeFile.value = file;
   renderedHtml.value = "Loading content...";
   try {
-    renderedHtml.value = await MainService.logbook.getFileHtml(file.path);
+    renderedHtml.value = await mainService.logbook.getFileHtml(file.path);
   } catch (err) {
     renderedHtml.value = `<p style="color: #ef4444;">Erreur de lecture du fichier : ${err}</p>`;
   }
@@ -39,7 +39,7 @@ const selectFile = async (file: FileNode) => {
 const startEditing = async () => {
   if (!activeFile.value) return;
   try {
-    rawText.value = await MainService.logbook.getFileRawText(activeFile.value.path);
+    rawText.value = await mainService.logbook.getFileRawText(activeFile.value.path);
     isEditing.value = true;
   } catch (err) {
     alert("Impossible de charger le texte brut : " + err);
@@ -49,9 +49,9 @@ const startEditing = async () => {
 const saveChanges = async () => {
   if (!activeFile.value) return;
   try {
-    await MainService.logbook.saveFileRawText(activeFile.value.path, rawText.value);
+    await mainService.logbook.saveFileRawText(activeFile.value.path, rawText.value);
     // On met à jour le HTML affiché
-    renderedHtml.value = await MainService.logbook.getFileHtml(activeFile.value.path);
+    renderedHtml.value = await mainService.logbook.getFileHtml(activeFile.value.path);
     isEditing.value = false;
   } catch (err) {
     alert("Erreur lors de la sauvegarde : " + err);

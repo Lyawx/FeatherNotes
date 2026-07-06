@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { open } from '@tauri-apps/plugin-dialog';
-import { MainService } from "../services/mainService";
+import { mainService } from "../services/mainService";
 import type { AppSettings } from "../services/settingsService";
 import type { OllamaStatus } from "../services/ollamaService";
 
@@ -9,6 +9,8 @@ const props = defineProps<{ ollamaStatus: string }>();
 const emit = defineEmits<{ (e: 'updateStatus', status: OllamaStatus): void }>();
 
 const appSettings = ref<AppSettings>({
+  urgent_threshold_days: 1,
+  warning_threshold_days: 3,
   theme: "default",
   ollama: {
     ollama_default_path: "",
@@ -26,8 +28,8 @@ const availableThemes = ref<string[]>([]);
 
 onMounted(async () => {
   try { 
-    appSettings.value = await MainService.settings.loadSettings(); 
-    availableThemes.value = await MainService.themes.getAvailableThemes();
+    appSettings.value = await mainService.settings.loadSettings(); 
+    availableThemes.value = await mainService.themes.getAvailableThemes();
   } catch (err) { 
     console.error(err); 
   }
@@ -35,7 +37,7 @@ onMounted(async () => {
 
 const saveSettings = async () => {
   try { 
-    await MainService.settings.saveSettings(appSettings.value); 
+    await mainService.settings.saveSettings(appSettings.value); 
   } catch (err) { 
     console.error(err); 
   }
@@ -44,7 +46,7 @@ const saveSettings = async () => {
 const handleThemeChange = async () => {
   try {
     await saveSettings();
-    await MainService.themes.applyTheme(appSettings.value.theme);
+    await mainService.themes.applyTheme(appSettings.value.theme);
   } catch (err) {
     console.error(err);
   }
@@ -54,10 +56,10 @@ const startOllama = async () => {
   if (props.ollamaStatus !== 'disconnected') return;
   emit('updateStatus', 'connecting');
   try {
-    await MainService.ollama.startProcess();
+    await mainService.ollama.startProcess();
     for (let i = 0; i < 20; i++) {
       await new Promise(resolve => setTimeout(resolve, 500));
-      if (await MainService.ollama.checkStatus()) {
+      if (await mainService.ollama.checkStatus()) {
         emit('updateStatus', 'connected');
         return;
       }
@@ -68,7 +70,7 @@ const startOllama = async () => {
 
 const stopOllama = async () => {
   try {
-    await MainService.ollama.stopProcess();
+    await mainService.ollama.stopProcess();
     emit('updateStatus', 'disconnected');
   } catch (err) { console.error(err); }
 };
@@ -115,6 +117,36 @@ const browsePath = async (target: 'ollama' | 'markdown') => {
             {{ theme }}
           </option>
         </select>
+      </div>
+    </div>
+
+    <div class="container-light">
+      <h2>Task Deadlines</h2>
+      <hr class="ui-divider" />
+      <p class="setting-description">Define thresholds (in days) to update priority badges for milestones and checkboxes.</p>
+      
+      <div class="numeric-settings-group">
+        <div class="setting-row-numeric">
+          <span class="setting-label">Urgent Threshold (Days)</span>
+          <input 
+            type="number" 
+            v-model.number="appSettings.urgent_threshold_days" 
+            @change="saveSettings" 
+            class="text-input-field numeric-input"
+            min="0"
+          />
+        </div>
+
+        <div class="setting-row-numeric">
+          <span class="setting-label">Warning Threshold (Days)</span>
+          <input 
+            type="number" 
+            v-model.number="appSettings.warning_threshold_days" 
+            @change="saveSettings" 
+            class="text-input-field numeric-input"
+            min="0"
+          />
+        </div>
       </div>
     </div>
 
@@ -182,6 +214,25 @@ const browsePath = async (target: 'ollama' | 'markdown') => {
   display: flex;
   align-items: center;
   margin-bottom: 1rem;
+}
+
+.numeric-settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 300px;
+}
+
+.setting-row-numeric {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.numeric-input {
+  width: 70px;
+  text-align: center;
 }
 
 .setting-label {

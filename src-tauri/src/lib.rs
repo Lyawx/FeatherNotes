@@ -1,11 +1,6 @@
-pub mod helper {
-    pub mod fshelper;
-    pub mod jhelper;
-    pub mod mdhelper;
-    pub mod themehelper;
-}
-pub mod settings;
+pub mod helper;
 pub mod ollama;
+pub mod settings;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -27,13 +22,15 @@ pub fn run() {
             ollama::rq::process_brain_dump,
             helper::fshelper::ensure_app_directories,
             helper::themehelper::inject_app_themes,
-            helper::themehelper::get_available_themes, // <-- AJOUTE CETTE LIGNE
-            helper::themehelper::load_theme_raw,       // <-- AJOUTE CETTE LIGNE
+            helper::themehelper::get_available_themes,
+            helper::themehelper::load_theme_raw,
             helper::mdhelper::convert_md_to_html,
             helper::mdhelper::get_vault_tree,
             helper::mdhelper::save_markdown_file,
             helper::mdhelper::read_raw_markdown,
-            helper::mdhelper::create_vault_directory
+            helper::mdhelper::create_vault_directory,
+            helper::taskhelper::get_tasks_structure,
+            helper::taskhelper::toggle_task_in_file
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

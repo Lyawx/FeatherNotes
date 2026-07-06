@@ -2,7 +2,9 @@ use crate::helper::fshelper;
 
 fn get_themes_list() -> Vec<(&'static str, &'static str)> {
     vec![
-        ("slate_nord.css", r#":root {
+        (
+            "slate_nord.css",
+            r#":root {
   --bg-00: #1e2530;
   --bg-01: #2b3545;
   --bg-02: #48556b;
@@ -21,7 +23,37 @@ fn get_themes_list() -> Vec<(&'static str, &'static str)> {
   --color-red: #f87171;
   --color-red-hover: #fca5a5;
   --color-red-surface: #2d1a1a;
-}"#),
+}"#,
+        ),
+        (
+            "light_theme.css",
+            r#":root {
+  --bg-00: #ffffff;
+  --bg-01: #f9fafb;
+  --bg-02: #f3f4f6;
+
+  --text-00: #141414;
+  --text-01: #374151;
+  --text-02: #9ca3af;
+
+  --border-width: 1px;
+
+  --bg-active: #e5e7eb;
+
+  --color-blue: #2563eb;
+  --color-blue-hover: #1d4ed8;
+  --color-blue-surface: #eff6ff;
+  --color-blue-dark: #3b82f6;
+
+  --color-green: #059669;
+  --color-green-hover: #047857;
+  --color-green-surface: #ecfdf5;
+
+  --color-red: #dc2626;
+  --color-red-hover: #b91c1c;
+  --color-red-surface: #fef2f2;
+}"#,
+        ),
     ]
 }
 
@@ -35,7 +67,8 @@ pub fn inject_app_themes() -> Result<(), String> {
         if let Ok(entries) = std::fs::read_dir(&base_path) {
             for entry in entries.flatten() {
                 let entry_path = entry.path();
-                if entry_path.is_file() && entry_path.extension().map_or(false, |ext| ext == "css") {
+                if entry_path.is_file() && entry_path.extension().map_or(false, |ext| ext == "css")
+                {
                     let _ = std::fs::remove_file(entry_path);
                 }
             }
@@ -78,7 +111,10 @@ pub fn load_theme_raw(theme_name: String) -> Result<String, String> {
     path.push(format!("{}.css", theme_name));
 
     if !path.exists() {
-        return Err(format!("Le fichier de thème {}.css n'existe pas.", theme_name));
+        return Err(format!(
+            "Le fichier de thème {}.css n'existe pas.",
+            theme_name
+        ));
     }
 
     fshelper::read_file_to_string(path)

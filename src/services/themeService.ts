@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { settingsService } from './settingsService';
 
-export const ThemeService = {
+export const themeService = {
   async getAvailableThemes(): Promise<string[]> {
     try {
       return await invoke<string[]>('get_available_themes');
