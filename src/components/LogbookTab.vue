@@ -1,17 +1,20 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import { mainService } from "../services/mainService";
+import { MainService } from "../services/mainService";
 import type { FileNode } from "../services/logbookService";
+import MarkdownEditor from "./MarkdownEditor.vue";
 
 const mdFiles = ref<FileNode[]>([]);
 const activeFile = ref<FileNode | null>(null);
 const renderedHtml = ref<string>("");
 const isLoading = ref<boolean>(true);
+const rawText = ref<string>("");
+const isEditing = ref<boolean>(false);
 
 const loadLogbook = async () => {
   isLoading.value = true;
   try {
-    mdFiles.value = await mainService.logbook.getLogbookFiles();
+    mdFiles.value = await MainService.logbook.getLogbookFiles();
     // Optionnel : Sélectionne automatiquement le premier fichier s'il y en a un
     if (mdFiles.value.length > 0) {
       selectFile(mdFiles.value[0]);
@@ -27,9 +30,31 @@ const selectFile = async (file: FileNode) => {
   activeFile.value = file;
   renderedHtml.value = "Loading content...";
   try {
-    renderedHtml.value = await mainService.logbook.getFileHtml(file.path);
+    renderedHtml.value = await MainService.logbook.getFileHtml(file.path);
   } catch (err) {
     renderedHtml.value = `<p style="color: #ef4444;">Erreur de lecture du fichier : ${err}</p>`;
+  }
+};
+
+const startEditing = async () => {
+  if (!activeFile.value) return;
+  try {
+    rawText.value = await MainService.logbook.getFileRawText(activeFile.value.path);
+    isEditing.value = true;
+  } catch (err) {
+    alert("Impossible de charger le texte brut : " + err);
+  }
+};
+
+const saveChanges = async () => {
+  if (!activeFile.value) return;
+  try {
+    await MainService.logbook.saveFileRawText(activeFile.value.path, rawText.value);
+    // On met à jour le HTML affiché
+    renderedHtml.value = await MainService.logbook.getFileHtml(activeFile.value.path);
+    isEditing.value = false;
+  } catch (err) {
+    alert("Erreur lors de la sauvegarde : " + err);
   }
 };
 
@@ -49,8 +74,8 @@ onMounted(() => {
       </div>
 
       <div v-else-if="mdFiles.length === 0" class="empty-state">
-        <p>Aucun fichier .md dans le dossier Logbook.</p>
-        <span class="hint">Ajoutez des fichiers Markdown pour les voir apparaître ici.</span>
+        <p>No markdown files found in the Logbook folder.</p>
+        <span class="hint">Add markdown files to see them displayed here.</span>
       </div>
 
       <ul v-else class="file-list">
@@ -62,15 +87,46 @@ onMounted(() => {
     </aside>
 
     <main class="file-content">
-      <div v-if="activeFile" class="markdown-body" v-html="renderedHtml"></div>
+      <div v-if="activeFile" class="content-wrapper">
+
+        <div class="note-actions">
+          <span class="file-title">{{ activeFile.name }}</span>
+          <button v-if="!isEditing" @click="startEditing" class="base-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
+              <title xmlns="">pen</title>
+              <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
+            </svg>
+          </button>
+          <div v-else class="edit-buttons-group">
+            <button @click="saveChanges" class="base-btn green-btn">
+              <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
+                <title xmlns="">save-line</title>
+                <path fill="currentColor"
+                  d="M7 19v-6h10v6h2V7.828L16.172 5H5v14zM4 3h13l4 4v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1m5 12v4h6v-4z" />
+              </svg>
+            </button>
+            <button @click="isEditing = false" class="base-btn red-btn">Annuler</button>
+          </div>
+        </div>
+
+        <hr class="ui-divider" style="margin-bottom: 1.5rem;" />
+
+        <MarkdownEditor v-if="isEditing" v-model="rawText" />
+
+        <div v-else class="markdown-body" v-html="renderedHtml"></div>
+
+      </div>
+
       <div v-else-if="!isLoading" class="preview-placeholder">
-        Sélectionnez une note dans la barre latérale pour l'afficher.
+        Select a file in the sidebar file explorer to display it here.
       </div>
     </main>
   </div>
 </template>
 
 <style scoped>
+
 #logbook-panel {
   display: flex;
   height: 100%;
@@ -78,8 +134,8 @@ onMounted(() => {
 
 .sidebar-files {
   width: 260px;
-  background-color: #1a1a1a;
-  border-right: 1px solid #2a2a2a;
+  background-color: var(--bg-01);
+  border-right: var(--border-width) solid var(--bg-02);
   padding: 1.5rem 1rem;
   overflow-y: auto;
   display: flex;
@@ -99,13 +155,13 @@ onMounted(() => {
 
 .empty-state p {
   font-size: 0.9rem;
-  color: #9ca3af;
+  color: var(--text-01);
   margin-bottom: 0.25rem;
 }
 
 .empty-state .hint {
   font-size: 0.8rem;
-  color: #6b7280;
+  color: var(--text-02);
 }
 
 .file-list {
@@ -119,7 +175,7 @@ onMounted(() => {
   padding: 0.65rem 0.85rem;
   cursor: pointer;
   border-radius: 8px;
-  color: #9ca3af;
+  color: var(--text-01);
   font-size: 0.95rem;
   transition: all 0.2s;
   white-space: nowrap;
@@ -128,13 +184,13 @@ onMounted(() => {
 }
 
 .file-item:hover {
-  background-color: #242424;
-  color: #fff;
+  background-color: var(--bg-02);
+  color: var(--text-00);
 }
 
 .file-item.active {
-  background-color: rgba(59, 130, 246, 0.15);
-  color: #3b82f6;
+  background-color: var(--bg-active);
+  color: var(--color-blue);
   font-weight: 500;
 }
 
@@ -142,7 +198,7 @@ onMounted(() => {
   flex: 1;
   padding: 2.5rem;
   overflow-y: auto;
-  background-color: #141414;
+  background-color: var(--bg-00);
 }
 
 .preview-placeholder {
@@ -150,7 +206,27 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #4b5563;
+  color: var(--text-02);
   font-size: 1.1rem;
+}
+
+.content-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.note-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 0.5rem;
+  height: 64px;
+}
+
+.file-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--text-00);
 }
 </style>

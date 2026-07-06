@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { open } from '@tauri-apps/plugin-dialog';
-import { mainService } from "../services/mainService";
+import { MainService } from "../services/mainService";
 import type { AppSettings } from "../services/settingsService";
 import type { OllamaStatus } from "../services/ollamaService";
 
@@ -9,6 +9,7 @@ const props = defineProps<{ ollamaStatus: string }>();
 const emit = defineEmits<{ (e: 'updateStatus', status: OllamaStatus): void }>();
 
 const appSettings = ref<AppSettings>({
+  theme: "default",
   ollama: {
     ollama_default_path: "",
     ollama_custom_path: "",
@@ -21,22 +22,42 @@ const appSettings = ref<AppSettings>({
   }
 });
 
+const availableThemes = ref<string[]>([]);
+
 onMounted(async () => {
-  try { appSettings.value = await mainService.settings.load(); } catch (err) { console.error(err); }
+  try { 
+    appSettings.value = await MainService.settings.loadSettings(); 
+    availableThemes.value = await MainService.themes.getAvailableThemes();
+  } catch (err) { 
+    console.error(err); 
+  }
 });
 
 const saveSettings = async () => {
-  try { await mainService.settings.save(appSettings.value); } catch (err) { console.error(err); }
+  try { 
+    await MainService.settings.saveSettings(appSettings.value); 
+  } catch (err) { 
+    console.error(err); 
+  }
+};
+
+const handleThemeChange = async () => {
+  try {
+    await saveSettings();
+    await MainService.themes.applyTheme(appSettings.value.theme);
+  } catch (err) {
+    console.error(err);
+  }
 };
 
 const startOllama = async () => {
   if (props.ollamaStatus !== 'disconnected') return;
   emit('updateStatus', 'connecting');
   try {
-    await mainService.ollama.startProcess();
+    await MainService.ollama.startProcess();
     for (let i = 0; i < 20; i++) {
       await new Promise(resolve => setTimeout(resolve, 500));
-      if (await mainService.ollama.checkStatus()) {
+      if (await MainService.ollama.checkStatus()) {
         emit('updateStatus', 'connected');
         return;
       }
@@ -47,14 +68,14 @@ const startOllama = async () => {
 
 const stopOllama = async () => {
   try {
-    await mainService.ollama.stopProcess();
+    await MainService.ollama.stopProcess();
     emit('updateStatus', 'disconnected');
   } catch (err) { console.error(err); }
 };
 
 const browsePath = async (target: 'ollama' | 'markdown') => {
   try {
-    const isDirectory = target === 'markdown'; // true pour dossier (markdown), false pour fichier (ollama)
+    const isDirectory = target === 'markdown';
 
     const selected = await open({
       multiple: false,
@@ -81,6 +102,23 @@ const browsePath = async (target: 'ollama' | 'markdown') => {
     <p>Configure internal components, backend runners, and paths.</p>
 
     <div class="container-light">
+      <h2>Interface Theme</h2>
+      <hr class="ui-divider" />
+      <p class="setting-description">Select a visual theme loaded from your application directories.</p>
+      <div class="setting-row">
+        <select 
+          v-model="appSettings.theme" 
+          @change="handleThemeChange" 
+          class="text-input-field select-dropdown"
+        >
+          <option v-for="theme in availableThemes" :key="theme" :value="theme">
+            {{ theme }}
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <div class="container-light">
       <h2>Ollama</h2>
       <hr class="ui-divider" />
       <div class="setting-row">
@@ -102,13 +140,13 @@ const browsePath = async (target: 'ollama' | 'markdown') => {
       </div>
 
       <div id="settings-action-block">
-        <button id="start-ollama-btn" class="base-btn" @click="startOllama"
+        <button class="base-btn green-btn" @click="startOllama"
           :disabled="ollamaStatus === 'connected' || ollamaStatus === 'connecting'">
           <span v-if="ollamaStatus === 'connecting'">Starting Ollama...</span>
           <span v-else>Start Ollama Process</span>
         </button>
 
-        <button id="stop-ollama-btn" class="base-btn" @click="stopOllama" :disabled="ollamaStatus !== 'connected'">
+        <button class="base-btn red-btn" @click="stopOllama" :disabled="ollamaStatus !== 'connected'">
           Force Stop Ollama Process
         </button>
       </div>
@@ -129,7 +167,7 @@ const browsePath = async (target: 'ollama' | 'markdown') => {
         <input type="text" v-model="appSettings.markdown.markdown_custom_path"
           :placeholder="appSettings.markdown.markdown_default_path || 'Recherche du dossier par défaut...'"
           :disabled="!appSettings.markdown.markdown_use_custom_path" @change="saveSettings" class="text-input-field" />
-        <button id="browse-md-btn" class="base-btn" @click="browsePath('markdown')"
+        <button class="base-btn dark-btn" @click="browsePath('markdown')"
           :disabled="!appSettings.markdown.markdown_use_custom_path">
           Browse...
         </button>
@@ -143,11 +181,18 @@ const browsePath = async (target: 'ollama' | 'markdown') => {
 .setting-row {
   display: flex;
   align-items: center;
+  margin-bottom: 1rem;
 }
 
 .setting-label {
   font-size: 0.95rem;
   font-weight: 500;
+}
+
+.setting-description {
+  font-size: 0.85rem;
+  color: var(--text-02);
+  margin-bottom: 1rem;
 }
 
 .input-group {
@@ -160,37 +205,9 @@ const browsePath = async (target: 'ollama' | 'markdown') => {
   gap: 1rem;
 }
 
-#browse-path-btn {
-  background-color: rgba(255, 255, 255, 0.08);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-#browse-path-btn:hover:not(:disabled) {
-  background-color: rgba(255, 255, 255, 0.15);
-}
-
-#start-ollama-btn {
-  background-color: rgba(74, 222, 128, 0.1);
-  color: #4ade80;
-  border-color: rgba(74, 222, 128, 0.3);
-}
-
-#start-ollama-btn:hover:not(:disabled) {
-  background-color: #4ade80;
-  color: #1a1a1a;
-  box-shadow: 0 0 12px rgba(74, 222, 128, 0.2);
-}
-
-#stop-ollama-btn {
-  background-color: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  border-color: rgba(239, 68, 68, 0.3);
-}
-
-#stop-ollama-btn:hover:not(:disabled) {
-  background-color: #ef4444;
-  color: #fff;
-  box-shadow: 0 0 12px rgba(239, 68, 68, 0.2);
+.select-dropdown {
+  width: 100%;
+  max-width: 300px;
+  cursor: pointer;
 }
 </style>

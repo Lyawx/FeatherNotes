@@ -1,7 +1,7 @@
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle};
 use std::path::PathBuf;
 use serde::{Serialize, Deserialize};
-use crate::helper::jhelper;
+use crate::helper::{jhelper, fshelper};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct OllamaSettings {
@@ -19,22 +19,59 @@ pub struct MarkdownSettings {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AppSettings {
+    pub theme: String,
     pub ollama: OllamaSettings,
     pub markdown: MarkdownSettings
 }
 
-fn get_settings_path(app: &AppHandle) -> Result<PathBuf, String> {
-    let mut path = app.path().config_dir().map_err(|e| e.to_string())?;
-    path.push("FeatherNotes");
+fn get_settings_path() -> PathBuf {
+    let mut path = fshelper::get_feather_documents_dir();
+    path.push("Settings");
     path.push("settings.json");
-    Ok(path)
+    path
+}
+
+fn resolve_default_ollama_dir() -> String {
+    let mut path = std::env::var("LOCALAPPDATA")
+        .or_else(|_| std::env::var("HOME"))
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from("."));
+
+    #[cfg(target_os = "windows")]
+    {
+        path.push("Programs");
+        path.push("Ollama");
+        path.push("Ollama App.exe");
+        return path.to_string_lossy().into_owned();
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        String::from("ollama")
+    }
+}
+
+impl Default for AppSettings {
+    fn default() -> Self {
+        Self {
+            theme: String::from("default"),
+            ollama: OllamaSettings {
+                ollama_default_path: resolve_default_ollama_dir(),
+                ollama_custom_path: String::new(),
+                ollama_use_custom_path: false,
+            },
+            markdown: MarkdownSettings {
+                markdown_default_path: fshelper::get_feather_documents_dir().to_string_lossy().into_owned(),
+                markdown_custom_path: String::new(),
+                markdown_use_custom_path: false,
+            },
+        }
+    }
 }
 
 #[tauri::command]
-pub async fn load_app_settings(app: AppHandle) -> Result<AppSettings, String> {
-    let path = get_settings_path(&app)?;
+pub async fn load_app_settings(_app: AppHandle) -> Result<AppSettings, String> {
+    let path = get_settings_path();
     
-    // Si le fichier n'existe pas (premier lancement), on l'initialise avec les valeurs par défaut
     if !path.exists() {
         let default_settings = AppSettings::default();
         jhelper::save_json(&path, &default_settings)?;
@@ -46,59 +83,8 @@ pub async fn load_app_settings(app: AppHandle) -> Result<AppSettings, String> {
 }
 
 #[tauri::command]
-pub async fn save_app_settings(app: AppHandle, settings: AppSettings) -> Result<(), String> {
-    let path = get_settings_path(&app)?;
+pub async fn save_app_settings(_app: AppHandle, settings: AppSettings) -> Result<(), String> {
+    let path = get_settings_path();
     jhelper::save_json(&path, &settings)?;
     Ok(())
-}
-
-// --- FONCTIONS UTILITAIRES POUR GÉNÉRER LES CHEMINS D'USINE ---
-
-fn resolve_default_documents_dir() -> String {
-    let base_path = std::env::var("USERPROFILE") 
-        .or_else(|_| std::env::var("HOME"))    
-        .map(PathBuf::from)
-        .ok();
-
-    if let Some(mut path) = base_path {
-        path.push("Documents");
-        path.push("FeatherNotes");
-        return path.to_string_lossy().into_owned();
-    }
-    String::new()
-}
-
-fn resolve_default_ollama_dir() -> String {
-    let base_path = std::env::var("LOCALAPPDATA")
-        .or_else(|_| std::env::var("HOME"))
-        .map(PathBuf::from)
-        .ok();
-
-    if let Some(mut path) = base_path {
-        #[cfg(target_os = "windows")]
-        {
-            path.push("Programs");
-            path.push("Ollama");
-            path.push("Ollama App.exe");
-            return path.to_string_lossy().into_owned();
-        }
-    }
-    String::from("ollama") // Fallback Mac/Linux ou binaire global dans le PATH
-}
-
-impl Default for AppSettings {
-    fn default() -> Self {
-        Self {
-            ollama: OllamaSettings {
-                ollama_default_path: resolve_default_ollama_dir(),
-                ollama_custom_path: String::new(),
-                ollama_use_custom_path: false,
-            },
-            markdown: MarkdownSettings {
-                markdown_default_path: resolve_default_documents_dir(),
-                markdown_custom_path: String::new(),
-                markdown_use_custom_path: false,
-            },
-        }
-    }
 }

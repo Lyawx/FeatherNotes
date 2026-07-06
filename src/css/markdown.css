@@ -1,0 +1,73 @@
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans+Code:ital,wght,MONO@0,300..800,1;1,300..800,1&display=swap');
+
+.markdown-body {
+  color: var(--text-01);
+  line-height: 1.6;
+}
+
+.markdown-body h1 { 
+  font-size: 1.8rem; 
+  margin-top: 0.5rem; 
+  margin-bottom: 1rem; 
+  color: var(--text-00); 
+  font-weight: 600; 
+}
+
+.markdown-body h2 { 
+  font-size: 1.4rem; 
+  margin-top: 1.75rem; 
+  margin-bottom: 0.75rem; 
+  color: var(--text-00); 
+  font-weight: 600; 
+}
+
+.markdown-body p { 
+  margin-bottom: 1rem; 
+}
+
+.markdown-body ul, .markdown-body ol {
+  padding-left: 2rem !important;
+  margin-bottom: 1rem;
+  list-style-type: disc !important;
+}
+
+.markdown-body li {
+  margin-bottom: 0.4rem;
+  color: var(--text-01);
+}
+
+.markdown-body li:has(input[type="checkbox"]) {
+  list-style-type: none !important;
+  margin-left: -1rem;
+}
+
+.markdown-body blockquote {
+  margin: 1.5rem 0;
+  padding: 0.75rem 1.25rem;
+  background-color: var(--bg-01);
+  border-left: 4px solid var(--blockquote-border);
+  border-radius: 0 8px 8px 0;
+  font-family: "Google Sans Code", monospace;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.markdown-body blockquote,
+.markdown-body blockquote p,
+.markdown-body blockquote li {
+  color: var(--text-01) !important;
+  font-size: 0.85em !important;
+}
+
+.markdown-body blockquote p {
+  margin-bottom: 0;
+}
+
+.markdown-body hr {
+  height: var(--border-width);
+  padding: 0;
+  margin: 2rem 0;
+  background-color: var(--bg-02);
+  border: 0;
+  border-radius: 2px;
+}

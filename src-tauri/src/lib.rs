@@ -1,13 +1,22 @@
-pub mod helper;
+pub mod helper {
+    pub mod fshelper;
+    pub mod jhelper;
+    pub mod mdhelper;
+    pub mod themehelper;
+}
 pub mod settings;
 pub mod ollama;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let _ = helper::fshelper::ensure_app_directories();
+    let _ = helper::themehelper::inject_app_themes();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_positioner::init())
         .invoke_handler(tauri::generate_handler![
             settings::load_app_settings,
             settings::save_app_settings,
@@ -16,8 +25,14 @@ pub fn run() {
             ollama::status::stop_ollama_process,
             ollama::rq::fetch_models,
             ollama::rq::process_brain_dump,
+            helper::fshelper::ensure_app_directories,
+            helper::themehelper::inject_app_themes,
+            helper::themehelper::get_available_themes, // <-- AJOUTE CETTE LIGNE
+            helper::themehelper::load_theme_raw,       // <-- AJOUTE CETTE LIGNE
             helper::mdhelper::convert_md_to_html,
             helper::mdhelper::get_vault_tree,
+            helper::mdhelper::save_markdown_file,
+            helper::mdhelper::read_raw_markdown,
             helper::mdhelper::create_vault_directory
         ])
         .run(tauri::generate_context!())

@@ -4,7 +4,7 @@ import SvgIcon from './components/SvgIcon.vue';
 import AiTab from './components/AiTab.vue';
 import SettingsTab from './components/SettingsTab.vue';
 import LogbookTab from "./components/LogbookTab.vue";
-import { mainService, type OllamaStatus } from "./services/mainService";
+import { MainService, type OllamaStatus } from "./services/mainService";
 
 interface Tab {
   id: 'ai' | 'logbook' | 'lifewiki' | 'tasks' | 'health' | 'settings';
@@ -32,7 +32,7 @@ let statusInterval: number | null = null;
 const checkHeartbeat = async () => {
   if (ollamaStatus.value === 'connecting') return;
   try {
-    const isAlive = await mainService.ollama.checkStatus();
+    const isAlive = await MainService.ollama.checkStatus();
     ollamaStatus.value = isAlive ? 'connected' : 'disconnected';
   } catch {
     ollamaStatus.value = 'disconnected';
@@ -43,10 +43,10 @@ const handleForcedStart = async () => {
   if (ollamaStatus.value !== 'disconnected') return;
   ollamaStatus.value = 'connecting';
   try {
-    await mainService.ollama.startProcess();
+    await MainService.ollama.startProcess();
     for (let i = 0; i < 20; i++) {
       await new Promise(resolve => setTimeout(resolve, 500));
-      if (await mainService.ollama.checkStatus()) {
+      if (await MainService.ollama.checkStatus()) {
         ollamaStatus.value = 'connected';
         return;
       }
@@ -58,9 +58,9 @@ const handleForcedStart = async () => {
 };
 
 onMounted(async () => {
-  await mainService.centerWindow();
+  await MainService.centerWindow();
   try {
-    const isAlive = await mainService.ollama.checkStatus();
+    const isAlive = await MainService.ollama.checkStatus();
     ollamaStatus.value = isAlive ? 'connected' : 'disconnected';
   } catch {
     ollamaStatus.value = 'disconnected';
@@ -112,28 +112,24 @@ onUnmounted(() => {
 </template>
 
 <style>
-/* --- GLOBAL ATOMIC DESIGN SYSTEM --- */
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-:root {
-  font-family: Inter, system-ui, sans-serif;
-  color-scheme: dark;
-  color: rgba(255, 255, 255, 0.9);
-}
-
 body,
 html {
   width: 100vw;
   height: 100vh;
-  background-color: #141414;
+  background-color: var(--bg-00);
   overflow: hidden;
+  font-family: Inter, system-ui, sans-serif;
+  color-scheme: dark;
+  color: var(--text-01);
 }
 
-/* --- FRAMEWORK WORKSPACE LAYOUTS --- */
 .app-layout {
   display: flex;
   width: 100vw;
@@ -142,8 +138,8 @@ html {
 
 .sidebar-left {
   width: 70px;
-  background-color: #1a1a1a;
-  border-right: 1px solid #2a2a2a;
+  background-color: var(--bg-01);
+  border-right: var(--border-width) solid var(--bg-02);
   padding: 1.5rem 0;
 }
 
@@ -162,7 +158,6 @@ html {
   align-items: center;
 }
 
-/* Pushes the settings button to the absolute floor of the flexbox grid */
 .settings-nav-btn {
   margin-top: auto;
 }
@@ -171,33 +166,32 @@ html {
   flex: 1;
   height: 100vh;
   overflow-y: auto;
-  background-color: #141414;
+  background-color: var(--bg-00);
 }
 
-/* --- NAVIGATION BUTTONS --- */
 .nav-btn {
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  border: 1px solid transparent;
+  border: var(--border-width) solid transparent;
   background-color: transparent;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
-  color: #666;
+  color: var(--text-02);
 }
 
 .nav-btn:hover {
-  background-color: #242424;
-  color: #fff;
+  background-color: var(--bg-02);
+  color: var(--text-00);
 }
 
 .nav-btn.active {
-  background-color: #3b82f6;
-  color: #fff;
-  border-color: #2563eb;
+  background-color: var(--color-blue);
+  color: var(--text-00);
+  border-color: var(--color-blue-dark);
 }
 
 .tab-icon {
@@ -206,7 +200,6 @@ html {
   fill: currentColor;
 }
 
-/* --- TYPOGRAPHY --- */
 .tab-panel {
   padding: 2.5rem;
   min-height: 100%;
@@ -215,7 +208,7 @@ html {
 h1 {
   font-size: 2rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-00);
   margin-bottom: 0.5rem;
   letter-spacing: -0.025em;
 }
@@ -223,27 +216,26 @@ h1 {
 h2 {
   font-size: 1.5rem;
   font-weight: 500;
-  color: #fff;
+  color: var(--text-00);
   margin-bottom: 1rem;
 }
 
 h3 {
   font-size: 1.2rem;
   font-weight: 500;
-  color: #f3f4f6;
+  color: var(--text-01);
   margin-bottom: 1rem;
 }
 
 p {
   font-size: 0.95rem;
-  color: #9ca3af;
+  color: var(--text-01);
   margin-bottom: 1.5rem;
 }
 
-/* --- TWO CONCRETE STANDALONE CONTAINERS --- */
 .container-light {
-  background-color: #1a1a1a;
-  border: 1px solid #333333;
+  background-color: var(--bg-01);
+  border: var(--border-width) solid var(--bg-02);
   border-radius: 8px;
   padding: 1.5rem;
   display: flex;
@@ -253,8 +245,8 @@ p {
 }
 
 .container-dark {
-  background-color: #141414;
-  border: 1px solid #333333;
+  background-color: var(--bg-00);
+  border: var(--border-width) solid var(--bg-02);
   border-radius: 8px;
   padding: 1.5rem;
   display: flex;
@@ -263,20 +255,18 @@ p {
   margin-bottom: 1.25rem;
 }
 
-/* --- REUSABLE DIVIDER / SEPARATOR --- */
 .ui-divider {
-  height: 1px;
+  height: var(--border-width);
   width: 100%;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--bg-02);
   border: none;
 }
 
-/* --- REUSABLE INPUT FIELDS --- */
 .text-input-field {
   width: 100%;
-  background-color: rgba(0, 0, 0, 0.2);
-  border: 1px solid #333333;
-  color: #fff;
+  background-color: var(--bg-00);
+  border: var(--border-width) solid var(--bg-02);
+  color: var(--text-00);
   padding: 0.65rem 0.85rem;
   border-radius: 8px;
   font-family: inherit;
@@ -286,18 +276,16 @@ p {
 
 .text-input-field:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  border-color: var(--color-blue);
 }
 
 .text-input-field:disabled {
-  background-color: rgba(255, 255, 255, 0.02);
-  color: #4b5563;
+  background-color: var(--bg-01);
+  color: var(--text-02);
   cursor: not-allowed;
-  border-color: rgba(255, 255, 255, 0.05);
+  border-color: var(--bg-02);
 }
 
-/* --- ATOMIC BUTTONS SYSTEM --- */
 .base-btn {
   padding: 0.6rem 1.2rem;
   border-radius: 6px;
@@ -306,21 +294,59 @@ p {
   font-size: 0.9rem;
   font-weight: 600;
   transition: all 0.2s;
-  border: 1px solid transparent;
+  border: var(--border-width) solid var(--bg-02);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  background-color: var(--bg-01);
+  color: var(--text-00);
 }
 
 .base-btn:disabled {
-  background-color: rgba(255, 255, 255, 0.02) !important;
-  color: #4b5563 !important;
-  border-color: rgba(255, 255, 255, 0.05) !important;
+  background-color: var(--bg-01) !important;
+  color: var(--text-02) !important;
+  border-color: var(--bg-02) !important;
   box-shadow: none !important;
   cursor: not-allowed;
 }
 
-/* --- REUSABLE UI ANIMATIONS & SWITCHES --- */
+.base-btn:hover:not(:disabled) {
+  background-color: var(--bg-02);
+}
+
+.green-btn {
+  background-color: var(--color-green-surface);
+  color: var(--color-green-hover);
+  border-color: var(--color-green);
+}
+
+.green-btn:hover:not(:disabled) {
+  background-color: var(--color-green);
+  color: var(--bg-00);
+}
+
+.blue-btn {
+  background-color: var(--color-blue-surface);
+  color: var(--color-blue-hover);
+  border-color: var(--color-blue);
+}
+
+.blue-btn:hover:not(:disabled) {
+  background-color: var(--color-blue);
+  color: var(--text-00);
+}
+
+.red-btn {
+  background-color: var(--color-red-surface);
+  color: var(--color-red-hover);
+  border-color: var(--color-red);
+}
+
+.red-btn:hover:not(:disabled) {
+  background-color: var(--color-red);
+  color: var(--text-00);
+}
+
 .ui-toggle-wrapper {
   position: relative;
   display: inline-block;
@@ -341,10 +367,10 @@ p {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: var(--bg-00);
   transition: .3s;
   border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: var(--border-width) solid var(--bg-02);
 }
 
 .ui-toggle-slider:before {
@@ -354,25 +380,25 @@ p {
   width: 16px;
   left: 3px;
   bottom: 3px;
-  background-color: #aaa;
+  background-color: var(--text-01);
   transition: .3s;
   border-radius: 50%;
 }
 
-input:checked+.ui-toggle-slider {
-  background-color: #3b82f6;
-  border-color: #2563eb;
+input:checked + .ui-toggle-slider {
+  background-color: var(--color-blue);
+  border-color: var(--color-blue-dark);
 }
 
-input:checked+.ui-toggle-slider:before {
+input:checked + .ui-toggle-slider:before {
   transform: translateX(20px);
-  background-color: #fff;
+  background-color: var(--text-00);
 }
 
 .ui-spinner {
   width: 12px;
   height: 12px;
-  border: 2px solid #aaa;
+  border: 2px solid var(--text-01);
   border-top-color: transparent;
   border-radius: 50%;
   animation: global-spin 1s linear infinite;
@@ -398,7 +424,7 @@ input:checked+.ui-toggle-slider:before {
   width: 100%;
   max-width: 260px;
   height: 4px;
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--bg-00);
   border-radius: 2px;
   overflow: hidden;
   position: relative;
@@ -407,7 +433,7 @@ input:checked+.ui-toggle-slider:before {
 .ui-progress-bar {
   width: 50%;
   height: 100%;
-  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  background: linear-gradient(90deg, var(--color-blue), var(--color-blue-hover));
   animation: global-progress-slide 1.5s infinite ease-in-out;
 }
 
@@ -415,7 +441,6 @@ input:checked+.ui-toggle-slider:before {
   0% {
     transform: translateX(-100%);
   }
-
   100% {
     transform: translateX(200%);
   }
@@ -423,7 +448,7 @@ input:checked+.ui-toggle-slider:before {
 
 .ui-progress-label {
   font-size: 0.85rem;
-  color: #6b7280;
+  color: var(--text-02);
 }
 
 .engine-status-box {
@@ -438,51 +463,22 @@ input:checked+.ui-toggle-slider:before {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background-color: #ef4444;
+  background-color: var(--color-red);
 }
 
 .connected .engine-status-dot {
-  background-color: #4ade80;
+  background-color: var(--color-green);
 }
 
 .engine-status-txt {
   font-size: 0.85rem;
-  color: #9ca3af;
+  color: var(--text-01);
 }
 
 .engine-state-highlight {
   font-weight: 600;
-  color: #fff;
+  color: var(--text-00);
   text-transform: capitalize;
 }
 
-/* --- MARLDOWN STYLE --- */
-.markdown-body :deep(h1) {
-  font-size: 1.8rem;
-  margin-bottom: 1rem;
-  color: #fff;
-}
-
-.markdown-body :deep(h2) {
-  font-size: 1.4rem;
-  margin-top: 1.5rem;
-  margin-bottom: 0.75rem;
-  color: #fff;
-}
-
-.markdown-body :deep(p) {
-  margin-bottom: 1rem;
-  line-height: 1.6;
-  color: #d1d5db;
-}
-
-.markdown-body :deep(ul) {
-  margin-left: 1.5rem;
-  margin-bottom: 1rem;
-  color: #d1d5db;
-}
-
-.markdown-body :deep(li) {
-  margin-bottom: 0.25rem;
-}
 </style>

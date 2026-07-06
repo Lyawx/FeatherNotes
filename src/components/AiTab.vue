@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from "vue";
-import { mainService } from "../services/mainService";
+import { MainService } from "../services/mainService";
 import type { OllamaStatus } from "../services/ollamaService";
 
 const props = defineProps<{ ollamaStatus: OllamaStatus }>();
@@ -20,7 +20,7 @@ watch(() => props.ollamaStatus, (newStatus) => {
 
 const fetchModels = async () => {
     try {
-        const models = await mainService.ollama.fetchModels();
+        const models = await MainService.ollama.fetchModels();
         installedModels.value = models;
         if (models.length > 0 && !selectedModel.value) selectedModel.value = models[0];
     } catch (err) { console.error(err); }
@@ -31,7 +31,7 @@ const submitBrainDump = async () => {
     isProcessing.value = true;
     aiResult.value = "";
     try {
-        aiResult.value = await mainService.ollama.submitBrainDump(selectedModel.value, userInput.value);
+        aiResult.value = await MainService.ollama.submitBrainDump(selectedModel.value, userInput.value);
     } catch (error) { aiResult.value = "Error: " + error; }
     finally { isProcessing.value = false; }
 };
@@ -65,7 +65,7 @@ const submitBrainDump = async () => {
                             <option v-for="model in installedModels" :key="model" :value="model">{{ model }}</option>
                         </select>
 
-                        <button id="submit-dump-btn" class="base-btn" @click="submitBrainDump"
+                        <button class="base-btn blue-btn" @click="submitBrainDump"
                             :disabled="ollamaStatus !== 'connected' || !userInput.trim() || isProcessing">
                             Process Brain Dump
                         </button>
@@ -98,71 +98,62 @@ const submitBrainDump = async () => {
 </template>
 
 <style scoped>
+
 #ai-assistant-panel {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 #ai-workspace-container {
-    display: flex;
-    flex-direction: row;
-    gap: 1.5rem;
-    margin-top: 1.5rem;
-    height: 100%;
+  display: flex;
+  flex-direction: row;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+  height: 100%;
 }
 
 .ai-column {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 #brain-textarea {
-    resize: none;
-    height: 100%;
+  resize: none;
+  height: 100%;
 }
 
 #ai-result-box {
-    margin-bottom: 0;
-    height: 100%;
+  margin-bottom: 0;
+  height: 100%;
 }
 
 .action-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-left: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-left: 0.5rem;
 }
 
 .controls-group {
-    display: flex;
-    gap: 0.75rem;
+  display: flex;
+  gap: 0.75rem;
 }
 
 .model-select {
-    background-color: rgba(0, 0, 0, 0.2);
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 0.5rem;
-    border-radius: 6px;
-    font-family: inherit;
-}
-
-#submit-dump-btn {
-    background-color: #3b82f6;
-    color: #fff;
-}
-
-#submit-dump-btn:hover:not(:disabled) {
-    background-color: #2563eb;
-    box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+  background-color: var(--bg-00);
+  color: var(--text-00);
+  border: var(--border-width) solid var(--bg-02);
+  padding: 0.5rem;
+  border-radius: 6px;
+  font-family: inherit;
 }
 
 .preview-placeholder {
-    color: #4b5563;
-    font-size: 0.9rem;
-    font-style: italic;
+  color: var(--text-02);
+  font-size: 0.9rem;
+  font-style: italic;
 }
 </style>

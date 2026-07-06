@@ -1,0 +1,31 @@
+:root {
+  /* --- 3 Nuances de Noir (Fonds et Surfaces) --- */
+  --bg-00: #141414;         
+  --bg-01: #1a1a1a;      
+  --bg-02: #242424;         
+
+  /* --- 3 Nuances de Blanc (Typographie et Icônes) --- */
+  --text-00: #ffffff;       
+  --text-01: #d1d5db;     
+  --text-02: #6b7280;     
+
+  /* --- Système de Bordures Atomique --- */
+  --border-width: 1px;
+
+  /* --- États Complexes (Dérivés des Gris) --- */
+  --bg-active: #1f293d;
+
+  /* --- Couleurs d'Accent (3 Nuances Strictes) --- */
+  --color-blue: #3b82f6;
+  --color-blue-hover: #4f8ff7;
+  --color-blue-surface: #18263e;
+  --color-blue-dark: #2563eb;
+
+  --color-green: #10b981;
+  --color-green-hover: #14d494;
+  --color-green-surface: #132b23;
+
+  --color-red: #ef4444;
+  --color-red-hover: #f15c5c;
+  --color-red-surface: #331c1c;
+}
