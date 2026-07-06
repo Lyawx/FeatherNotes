@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from "vue";
 import { computed } from 'vue';
+import Titlebar from './components/TitleBar.vue';
 import SvgIcon from './components/SvgIcon.vue';
 import AiTab from './components/AiTab.vue';
 import SettingsTab from './components/SettingsTab.vue';
@@ -76,7 +77,9 @@ onUnmounted(() => {
 
 <template>
   <div id="app-root" class="app-layout">
-    <aside class="sidebar-left">
+    <Titlebar />
+    <div id="app-wrapper">
+      <aside class="sidebar-left">
       <nav class="nav-links">
         <div class="main-nav-group">
           <button v-for="tab in navigationTabs" :key="tab.id" :class="['nav-btn', { active: activeTab === tab.id }]"
@@ -96,6 +99,7 @@ onUnmounted(() => {
       <component :is="currentTabComponent" :ollamaStatus="ollamaStatus" @triggerStart="handleForcedStart"
         @updateStatus="ollamaStatus = $event" />
     </main>
+    </div>
   </div>
 </template>
 
@@ -115,12 +119,31 @@ html {
   font-family: Inter, system-ui, sans-serif;
   color-scheme: dark;
   color: var(--text-01);
+  display: flex;
+  flex-direction: column;
 }
 
 .app-layout {
   display: flex;
+  flex-direction: column;
   width: 100vw;
   height: 100vh;
+  overflow: hidden;
+}
+
+#app-wrapper {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  min-height: 0; 
+  overflow: hidden;
+}
+
+.main-content {
+  flex: 1;
+  height: 100%;
+  overflow-y: auto;
+  background-color: var(--bg-00);
 }
 
 .sidebar-left {
@@ -149,13 +172,6 @@ html {
   margin-top: auto;
 }
 
-.main-content {
-  flex: 1;
-  height: 100vh;
-  overflow-y: auto;
-  background-color: var(--bg-00);
-}
-
 .nav-btn {
   width: 48px;
   height: 48px;
@@ -176,9 +192,9 @@ html {
 }
 
 .nav-btn.active {
-  background-color: var(--color-blue);
+  background-color: var(--color-blue-dark);
   color: var(--text-00);
-  border-color: var(--color-blue-dark);
+  border-color: var(--color-blue);
 }
 
 .tab-icon {
@@ -193,31 +209,34 @@ html {
 }
 
 h1 {
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--text-00);
+  font-size: 1.6rem;
+  font-weight: 500;
+  color: var(--text-01);
   margin-bottom: 0.5rem;
   letter-spacing: -0.025em;
 }
 
 h2 {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   font-weight: 500;
-  color: var(--text-00);
-  margin-bottom: 1rem;
+  color: var(--text-01);
 }
 
 h3 {
   font-size: 1.2rem;
   font-weight: 500;
   color: var(--text-01);
-  margin-bottom: 1rem;
 }
 
 p {
   font-size: 0.95rem;
   color: var(--text-01);
   margin-bottom: 1.5rem;
+}
+
+.tab-desc{
+  color: var(--text-02);
+  margin-bottom: 2rem;
 }
 
 .container-light {
@@ -244,6 +263,8 @@ p {
 
 .ui-divider {
   height: var(--border-width);
+  margin: none;
+  padding: none;
   width: 100%;
   background-color: var(--bg-02);
   border: none;
@@ -285,7 +306,7 @@ p {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--bg-01);
+  background-color: var(--bg-00);
   color: var(--text-00);
 }
 

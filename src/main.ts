@@ -1,7 +1,8 @@
 import { createApp } from 'vue';
 import App from './App.vue';
 import './css/markdown.css';
-import './css/variables.css'
+import './themes/default_dark.css'
+import './css/customcheckbox.css'
 import { themeService } from './services/themeService';
 
 async function bootstrap() {

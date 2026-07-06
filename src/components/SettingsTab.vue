@@ -101,12 +101,11 @@ const browsePath = async (target: 'ollama' | 'markdown') => {
 <template>
   <div id="settings-panel" class="tab-panel">
     <h1>Application Settings</h1>
-    <p>Configure internal components, backend runners, and paths.</p>
+    <p class="tab-desc">Configure internal components, backend runners, and paths.</p>
 
     <div class="container-light">
-      <h2>Interface Theme</h2>
+      <h3>Interface Theme</h3>
       <hr class="ui-divider" />
-      <p class="setting-description">Select a visual theme loaded from your application directories.</p>
       <div class="setting-row">
         <select 
           v-model="appSettings.theme" 
@@ -121,9 +120,8 @@ const browsePath = async (target: 'ollama' | 'markdown') => {
     </div>
 
     <div class="container-light">
-      <h2>Task Deadlines</h2>
+      <h3>Task Deadlines</h3>
       <hr class="ui-divider" />
-      <p class="setting-description">Define thresholds (in days) to update priority badges for milestones and checkboxes.</p>
       
       <div class="numeric-settings-group">
         <div class="setting-row-numeric">
@@ -151,7 +149,7 @@ const browsePath = async (target: 'ollama' | 'markdown') => {
     </div>
 
     <div class="container-light">
-      <h2>Ollama</h2>
+      <h3>Ollama</h3>
       <hr class="ui-divider" />
       <div class="setting-row">
         <label class="ui-toggle-wrapper">
@@ -185,7 +183,7 @@ const browsePath = async (target: 'ollama' | 'markdown') => {
     </div>
 
     <div class="container-light">
-      <h2>Storage</h2>
+      <h3>Storage</h3>
       <hr class="ui-divider" />
       <div class="setting-row">
         <label class="ui-toggle-wrapper">

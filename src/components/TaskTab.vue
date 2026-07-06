@@ -116,7 +116,7 @@ const getProjectProgress = (project: TaskProject): number => {
 <template>
   <div id="tasks-panel" class="tab-panel">
     <h1>Project Tasks</h1>
-    <p class="panel-subtitle">Manage your milestones and checkboxes directly synced with your markdown vault.</p>
+    <p class="tab-desc">Manage your milestones and checkboxes directly synced with your markdown vault.</p>
 
     <div v-if="projects.length === 0" class="empty-state">
       No projects or task files found.
@@ -206,10 +206,6 @@ const getProjectProgress = (project: TaskProject): number => {
 </template>
 
 <style scoped>
-.panel-subtitle {
-  color: var(--text-02);
-  margin-bottom: 2rem;
-}
 
 .project-container {
   background: var(--bg-01);
@@ -345,26 +341,26 @@ const getProjectProgress = (project: TaskProject): number => {
 }
 
 .badge-priority.overdue {
+  background-color: var(--text-02);
+  color: var(--bg-02);
+}
+
+.badge-priority.urgent {
   background-color: var(--color-red-surface);
   color: var(--color-red);
   border: 1px solid var(--color-red);
 }
 
-.badge-priority.urgent {
-  background-color: #3a2222;
-  color: #ff8585;
-  border: 1px solid #b94a4a;
-}
-
 .badge-priority.warning {
-  background-color: #372f1d;
-  color: #eab308;
-  border: 1px solid #a16207;
+  background-color: var(--color-yellow-surface);
+  color: var(--color-yellow);
+  border: 1px solid var(--color-yellow);
 }
 
 .badge-priority.normal {
-  background-color: var(--bg-02);
-  color: var(--text-02);
+  background-color: var(--color-blue-surface);
+  color: var(--color-blue);
+  border: 1px solid var(--color-blue);
 }
 
 .progress-wrapper {

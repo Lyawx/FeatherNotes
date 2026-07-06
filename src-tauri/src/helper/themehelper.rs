@@ -1,103 +1,57 @@
 use crate::helper::fshelper;
+use std::collections::HashMap;
 
-fn get_themes_list() -> Vec<(&'static str, &'static str)> {
-    vec![
-        (
-            "slate_nord.css",
-            r#":root {
-  --bg-00: #1e2530;
-  --bg-01: #2b3545;
-  --bg-02: #48556b;
-  --text-00: #ffffff;
-  --text-01: #e1e7f0;
-  --text-02: #7fa3c4;
-  --border-width: 1px;
-  --bg-active: #3b485c;
-  --color-blue: #60a5fa;
-  --color-blue-hover: #93c5fd;
-  --color-blue-surface: #20293a;
-  --color-blue-dark: #1e3a8a;
-  --color-green: #34d399;
-  --color-green-hover: #6ee7b7;
-  --color-green-surface: #182c25;
-  --color-red: #f87171;
-  --color-red-hover: #fca5a5;
-  --color-red-surface: #2d1a1a;
-}"#,
-        ),
-        (
-            "light_theme.css",
-            r#":root {
-  --bg-00: #ffffff;
-  --bg-01: #f9fafb;
-  --bg-02: #f3f4f6;
-
-  --text-00: #141414;
-  --text-01: #374151;
-  --text-02: #9ca3af;
-
-  --border-width: 1px;
-
-  --bg-active: #e5e7eb;
-
-  --color-blue: #2563eb;
-  --color-blue-hover: #1d4ed8;
-  --color-blue-surface: #eff6ff;
-  --color-blue-dark: #3b82f6;
-
-  --color-green: #059669;
-  --color-green-hover: #047857;
-  --color-green-surface: #ecfdf5;
-
-  --color-red: #dc2626;
-  --color-red-hover: #b91c1c;
-  --color-red-surface: #fef2f2;
-}"#,
-        ),
-    ]
+fn get_builtin_themes() -> HashMap<&'static str, &'static str> {
+    let mut m = HashMap::new();
+    m.insert("default_dark", include_str!("../../../src/themes/default_dark.css"));
+    m.insert("light_theme", include_str!("../../../src/themes/default_light.css"));
+    m.insert("slate_nord", include_str!("../../../src/themes/slate_nord.css"));
+    m
 }
+
+const USER_TEMPLATE_CSS: &str = include_str!("../../../src/themes/user_template.css");
 
 #[tauri::command]
 pub fn inject_app_themes() -> Result<(), String> {
     let mut base_path = fshelper::get_feather_documents_dir();
     base_path.push("Themes");
 
-    // Supprime d'abord les anciens fichiers CSS pour éviter les résidus des autres thèmes
-    if base_path.exists() {
-        if let Ok(entries) = std::fs::read_dir(&base_path) {
-            for entry in entries.flatten() {
-                let entry_path = entry.path();
-                if entry_path.is_file() && entry_path.extension().map_or(false, |ext| ext == "css")
-                {
-                    let _ = std::fs::remove_file(entry_path);
-                }
-            }
-        }
+    if !base_path.exists() {
+        std::fs::create_dir_all(&base_path).map_err(|e| e.to_string())?;
     }
 
-    for (filename, css_content) in get_themes_list() {
-        let mut theme_file = base_path.clone();
-        theme_file.push(filename);
-
-        if !theme_file.exists() {
-            fshelper::write_string_to_file(&theme_file, css_content)?;
-        }
+    let mut template_file = base_path.clone();
+    template_file.push("user_template.css.example");
+    
+    if !template_file.exists() {
+        fshelper::write_string_to_file(&template_file, USER_TEMPLATE_CSS)?;
     }
+
     Ok(())
 }
 
 #[tauri::command]
 pub fn get_available_themes() -> Result<Vec<String>, String> {
+    let mut themes = vec![];
+
+    for name in get_builtin_themes().keys() {
+        themes.push(name.to_string());
+    }
+
     let mut path = fshelper::get_feather_documents_dir();
     path.push("Themes");
 
-    let root_node = fshelper::build_safe_tree(&path)?;
-    let mut themes = vec![String::from("default")];
-
-    for child in root_node.children {
-        if !child.is_dir && child.name.ends_with(".css") {
-            let name_without_ext = child.name.strip_suffix(".css").unwrap_or(&child.name);
-            themes.push(name_without_ext.to_string());
+    if path.exists() {
+        if let Ok(root_node) = fshelper::build_safe_tree(&path) {
+            for child in root_node.children {
+                if !child.is_dir && child.name.ends_with(".css") && !child.name.ends_with(".example") {
+                    let name_without_ext = child.name.strip_suffix(".css").unwrap_or(&child.name);
+                    
+                    if !themes.contains(&name_without_ext.to_string()) {
+                        themes.push(name_without_ext.to_string());
+                    }
+                }
+            }
         }
     }
 
@@ -106,13 +60,18 @@ pub fn get_available_themes() -> Result<Vec<String>, String> {
 
 #[tauri::command]
 pub fn load_theme_raw(theme_name: String) -> Result<String, String> {
+    let builtin_themes = get_builtin_themes();
+    if let Some(css_content) = builtin_themes.get(theme_name.as_str()) {
+        return Ok(css_content.to_string());
+    }
+
     let mut path = fshelper::get_feather_documents_dir();
     path.push("Themes");
     path.push(format!("{}.css", theme_name));
 
     if !path.exists() {
         return Err(format!(
-            "Le fichier de thème {}.css n'existe pas.",
+            "Le thème '{}' n'existe ni en interne ni dans ton dossier utilisateur.",
             theme_name
         ));
     }

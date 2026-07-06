@@ -8,6 +8,17 @@ pub fn run() {
     let _ = helper::themehelper::inject_app_themes();
 
     tauri::Builder::default()
+        .setup(|_app| {
+            #[cfg(not(dev))]
+            {
+                use tauri::Manager;
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window
+                        .eval("window.addEventListener('contextmenu', e => e.preventDefault());");
+                }
+            }
+            Ok(())
+        })
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())

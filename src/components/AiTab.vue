@@ -41,7 +41,7 @@ const submitBrainDump = async () => {
     <div id="ai-assistant-panel" class="tab-panel">
         <div class="header-zone">
             <h1>AI Assistant</h1>
-            <p>Dump your thoughts, raw ideas, or your entire day. The local AI will sort everything automatically.</p>
+            <p class="tab-desc">Dump your thoughts, raw ideas, or your entire day. The local AI will sort everything automatically.</p>
         </div>
 
         <div id="ai-workspace-container">
