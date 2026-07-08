@@ -1,4 +1,17 @@
 use serde::{Serialize, Deserialize};
+use std::sync::OnceLock;
+
+// Optimisation : Utilisation d'un client unique persistant avec un timeout adapté de 60s
+static OLLAMA_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+
+fn get_ollama_client() -> &'static reqwest::Client {
+    OLLAMA_CLIENT.get_or_init(|| {
+        reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(60))
+            .build()
+            .unwrap()
+    })
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 struct OllamaModel {
@@ -25,11 +38,7 @@ struct OllamaGenerateResponse {
 
 #[tauri::command]
 pub async fn fetch_models() -> Result<Vec<String>, String> {
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(2))
-        .build()
-        .map_err(|e| e.to_string())?;
-
+    let client = get_ollama_client();
     let res = client.get("http://localhost:11434/api/tags").send().await;
 
     match res {
@@ -49,10 +58,7 @@ pub async fn fetch_models() -> Result<Vec<String>, String> {
 // Sends the text and returns the complete formatted string response once finished
 #[tauri::command]
 pub async fn process_brain_dump(selected_model: String, raw_dump: String) -> Result<String, String> {
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(60))
-        .build()
-        .map_err(|e| e.to_string())?;
+    let client = get_ollama_client();
 
     let system_prompt = String::from(
         "You are FeatherNotes, a precise organization assistant. \

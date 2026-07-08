@@ -80,25 +80,25 @@ onUnmounted(() => {
     <Titlebar />
     <div id="app-wrapper">
       <aside class="sidebar-left">
-      <nav class="nav-links">
-        <div class="main-nav-group">
-          <button v-for="tab in navigationTabs" :key="tab.id" :class="['nav-btn', { active: activeTab === tab.id }]"
-            @click="activeTab = tab.id as TabName">
-            <SvgIcon :name="tab.icon" class="tab-icon" />
+        <nav class="nav-links">
+          <div class="main-nav-group">
+            <button v-for="tab in navigationTabs" :key="tab.id" :class="['nav-btn', { active: activeTab === tab.id }]"
+              @click="activeTab = tab.id as TabName">
+              <SvgIcon :name="tab.icon" class="tab-icon" />
+            </button>
+          </div>
+
+          <button :class="['nav-btn', 'settings-nav-btn', { active: activeTab === 'settings' }]"
+            @click="activeTab = 'settings'">
+            <SvgIcon name="settings" class="tab-icon" />
           </button>
-        </div>
+        </nav>
+      </aside>
 
-        <button :class="['nav-btn', 'settings-nav-btn', { active: activeTab === 'settings' }]"
-          @click="activeTab = 'settings'">
-          <SvgIcon name="settings" class="tab-icon" />
-        </button>
-      </nav>
-    </aside>
-
-    <main class="main-content">
-      <component :is="currentTabComponent" :ollamaStatus="ollamaStatus" @triggerStart="handleForcedStart"
-        @updateStatus="ollamaStatus = $event" />
-    </main>
+      <main class="main-content">
+        <component :is="currentTabComponent" :ollamaStatus="ollamaStatus" @triggerStart="handleForcedStart"
+          @updateStatus="ollamaStatus = $event" />
+      </main>
     </div>
   </div>
 </template>
@@ -135,7 +135,7 @@ html {
   display: flex;
   flex-direction: row;
   flex: 1;
-  min-height: 0; 
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -234,7 +234,7 @@ p {
   margin-bottom: 1.5rem;
 }
 
-.tab-desc{
+.tab-desc {
   color: var(--text-02);
   margin-bottom: 2rem;
 }
@@ -488,5 +488,187 @@ input:checked+.ui-toggle-slider:before {
   font-weight: 600;
   color: var(--text-00);
   text-transform: capitalize;
+}
+
+.empty-state {
+  padding: 1rem 0;
+  text-align: center;
+}
+
+.empty-state p {
+  font-size: 0.9rem;
+  color: var(--text-01);
+  margin-bottom: 0.25rem;
+}
+
+.empty-state .hint {
+  font-size: 0.8rem;
+  color: var(--text-02);
+}
+
+.badge-priority {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge-priority.overdue {
+  background-color: var(--text-02);
+  color: var(--bg-02);
+}
+
+.badge-priority.urgent {
+  background-color: var(--color-red-surface);
+  color: var(--color-red);
+  border: 1px solid var(--color-red);
+}
+
+.badge-priority.warning {
+  background-color: var(--color-yellow-surface);
+  color: var(--color-yellow);
+  border: 1px solid var(--color-yellow);
+}
+
+.badge-priority.normal {
+  background-color: var(--color-blue-surface);
+  color: var(--color-blue);
+  border: 1px solid var(--color-blue);
+}
+
+.edit-buttons-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.progress-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.progress-bar-container-large {
+  flex-grow: 1;
+  height: 10px;
+  background-color: var(--bg-00);
+  border-radius: 5px;
+  overflow: hidden;
+  border: var(--border-width) solid var(--bg-active);
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background-color: var(--color-blue);
+  border-radius: 5px;
+  transition: width 0.3s ease;
+}
+
+.progress-text-large {
+  font-size: 0.85rem;
+  font-family: monospace;
+  font-weight: 600;
+  color: var(--text-01);
+  min-width: 38px;
+  text-align: right;
+}
+
+.milestone-progress-circle-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.progress-circle {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.circle-bg {
+  fill: none;
+  stroke: var(--bg-00);
+  stroke-width: 3.8;
+}
+
+.circle-fill {
+  fill: none;
+  stroke: var(--color-blue);
+  stroke-width: 3.8;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.3s ease;
+}
+
+.circle-text {
+  position: absolute;
+  font-size: 0.6rem;
+  font-family: monospace;
+  font-weight: 600;
+  color: var(--text-02);
+}
+
+.select-container {
+  flex: 1;
+  position: relative;
+}
+
+.select-container::after {
+  content: "";
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0.8rem;
+  height: 0.8rem;
+  background-color: var(--text-02);
+  clip-path: polygon(15% 30%, 85% 30%, 50% 75%);
+  pointer-events: none;
+  transition: background-color 0.15s ease, transform 0.2s ease;
+}
+
+.select-container:hover::after {
+  background-color: var(--text-00);
+}
+
+.dropdown {
+  height: min-content;
+  width: 100%;
+  padding: 0.5rem 2rem 0.5rem 0.75rem;
+  border-radius: 10px;
+  border: var(--border-width) solid var(--bg-02);
+  background-color: var(--bg-00);
+  color: var(--text-01);
+  font-size: 0.85rem;
+  font-weight: 500;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+}
+
+.dropdown:hover {
+  border-color: var(--text-02);
+  color: var(--text-00);
+  background-color: var(--bg-02);
+}
+
+.dropdown:focus {
+  border-color: var(--color-blue);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.dropdown option {
+  background-color: var(--bg-01);
+  color: var(--text-01);
+  padding: 0.5rem;
 }
 </style>

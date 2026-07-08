@@ -1,7 +1,6 @@
 use tauri::{AppHandle};
-use std::path::PathBuf;
 use serde::{Serialize, Deserialize};
-use crate::helper::{jhelper, fshelper};
+use crate::helper::{jhelper, fshelper::{self, PathBuf}};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct OllamaSettings {

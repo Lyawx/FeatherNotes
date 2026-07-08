@@ -1,10 +1,13 @@
 import { invoke } from "@tauri-apps/api/core";
 import { settingsService } from "./settingsService";
+import { itemService } from "./itemService";
 
 export interface FileNode {
   name: string;
   path: string;
   is_dir: boolean;
+  createdAt: number;
+  updatedAt: number;
   children: FileNode[];
 }
 
@@ -34,7 +37,7 @@ export const logbookService = {
 
     const separator = vaultPath.includes("/") ? "/" : "\\";
     const logbookPath = `${vaultPath}${separator}Logbook`;
-    
+
     await invoke("create_vault_directory", { dirPath: logbookPath });
 
     try {
@@ -48,16 +51,9 @@ export const logbookService = {
     }
   },
 
-  async getFileHtml(filePath: string): Promise<string> {
-    return await invoke<string>("convert_md_to_html", { filePath });
+  async getLogbookPath(): Promise<string> {
+    const path = await itemService.getDirectoryPath('LogBook');
+    return path
   },
-
-  async getFileRawText(filePath: string): Promise<string> {
-    return await invoke<string>("read_raw_markdown", { filePath });
-  },
-
-  async saveFileRawText(filePath: string, content: string): Promise<void> {
-    await invoke("save_markdown_file", { filePath, content });
-  }
 
 };

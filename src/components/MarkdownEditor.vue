@@ -59,10 +59,6 @@ const defaultPlaceholder = `# Header 1\n\nWrite your markdown here...\n\n- [ ] T
 </template>
 
 <style scoped>
-.edit-buttons-group {
-  display: flex;
-  gap: 0.5rem;
-}
 
 .editor-container {
   flex: 1;

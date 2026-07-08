@@ -1,21 +1,21 @@
-use std::fs;
-use std::path::PathBuf;
 use serde::{Serialize, Deserialize};
-use crate::helper::fshelper;
+use crate::helper::fshelper::{self, PathBuf};
+use std::fs;
+use std::time::SystemTime;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TaskItem {
     pub id: usize,
     pub text: String,
     pub completed: bool,
-    pub due_date: Option<String>, // <-- Ajout de la date de la tâche
+    pub due_date: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Milestone {
     pub name: String,
     pub path: String,
-    pub date: Option<String>,     // <-- Ajout de la date de la milestone
+    pub date: Option<String>,
     pub tasks: Vec<TaskItem>,
 }
 
@@ -23,6 +23,10 @@ pub struct Milestone {
 pub struct TaskProject {
     pub name: String,
     pub path: String,
+    #[serde(rename = "createdAt")]
+    pub created_at: i64,
+    #[serde(rename = "updatedAt")]
+    pub updated_at: i64,
     pub milestones: Vec<Milestone>,
 }
 
@@ -31,26 +35,41 @@ pub fn get_tasks_structure() -> Result<Vec<TaskProject>, String> {
     let mut root_path = fshelper::get_feather_documents_dir();
     root_path.push("Tasks");
 
-    if !root_path.exists() {
+    if !fshelper::exists(&root_path) {
         return Ok(vec![]);
     }
 
     let mut projects = Vec::new();
 
-    if let Ok(entries) = fs::read_dir(root_path) {
-        for entry in entries.flatten() {
-            let path = entry.path();
+    if let Ok(paths) = fshelper::read_dir_entries(&root_path) {
+        for path in paths {
             if path.is_dir() {
                 let project_name = path.file_name().unwrap_or_default().to_string_lossy().into_owned();
                 let mut milestones = Vec::new();
 
-                if let Ok(sub_entries) = fs::read_dir(&path) {
-                    for sub_entry in sub_entries.flatten() {
-                        let sub_path = sub_entry.path();
+                let mut created_at = 0;
+                let mut updated_at = 0;
+
+                if let Ok(metadata) = fs::metadata(&path) {
+                    created_at = metadata.created()
+                        .or_else(|_| metadata.modified())
+                        .ok()
+                        .and_then(|t| t.duration_since(SystemTime::UNIX_EPOCH).ok())
+                        .map(|d| d.as_millis() as i64)
+                        .unwrap_or(0);
+
+                    updated_at = metadata.modified()
+                        .ok()
+                        .and_then(|t| t.duration_since(SystemTime::UNIX_EPOCH).ok())
+                        .map(|d| d.as_millis() as i64)
+                        .unwrap_or(0);
+                }
+
+                if let Ok(sub_paths) = fshelper::read_dir_entries(&path) {
+                    for sub_path in sub_paths {
                         if sub_path.is_file() && sub_path.extension().map_or(false, |ext| ext == "md") {
                             let milestone_name = sub_path.file_stem().unwrap_or_default().to_string_lossy().into_owned();
                             
-                            // Récupération combinée (Front matter + Tâches)
                             let (milestone_date, tasks) = parse_milestone_file(&sub_path)?;
 
                             milestones.push(Milestone {
@@ -66,6 +85,8 @@ pub fn get_tasks_structure() -> Result<Vec<TaskProject>, String> {
                 projects.push(TaskProject {
                     name: project_name,
                     path: path.to_string_lossy().into_owned(),
+                    created_at,
+                    updated_at,
                     milestones,
                 });
             }
@@ -76,7 +97,7 @@ pub fn get_tasks_structure() -> Result<Vec<TaskProject>, String> {
 }
 
 fn parse_milestone_file(path: &PathBuf) -> Result<(Option<String>, Vec<TaskItem>), String> {
-    let content = fs::read_to_string(path).map_err(|e| e.to_string())?;
+    let content = fshelper::read_file_to_string(path)?;
     let mut tasks = Vec::new();
     let mut id_counter = 0;
     let mut milestone_date = None;
@@ -87,7 +108,6 @@ fn parse_milestone_file(path: &PathBuf) -> Result<(Option<String>, Vec<TaskItem>
     for line in content.lines() {
         let trimmed = line.trim();
 
-        // Gestion du Front Matter (YAML) en haut de fichier
         if trimmed == "---" {
             front_matter_count += 1;
             if front_matter_count == 1 {
@@ -107,20 +127,17 @@ fn parse_milestone_file(path: &PathBuf) -> Result<(Option<String>, Vec<TaskItem>
             continue;
         }
 
-        // Parsing des lignes de tâches
         if trimmed.starts_with("- [ ]") || trimmed.starts_with("- [x]") || trimmed.starts_with("- [X]") {
             let completed = !trimmed.starts_with("- [ ]");
             let mut text = trimmed[5..].trim().to_string();
             let mut due_date = None;
 
-            // Détection du tag [due: YYYY-MM-DD]
             if let Some(start_idx) = text.find("[due:") {
                 if let Some(end_idx) = text[start_idx..].find(']') {
                     let absolute_end = start_idx + end_idx;
                     let date_part = &text[start_idx + 5..absolute_end].trim();
                     due_date = Some(date_part.to_string());
                     
-                    // On nettoie le texte pour enlever la date de l'affichage de l'intitulé
                     text = format!("{}{}", &text[..start_idx], &text[absolute_end + 1..]).trim().to_string();
                 }
             }
@@ -141,7 +158,7 @@ fn parse_milestone_file(path: &PathBuf) -> Result<(Option<String>, Vec<TaskItem>
 #[tauri::command]
 pub fn toggle_task_in_file(file_path: String, task_index: usize, completed: bool) -> Result<(), String> {
     let path = PathBuf::from(&file_path);
-    let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    let content = fshelper::read_file_to_string(&path)?;
     let mut lines: Vec<String> = content.lines().map(|l| l.to_string()).collect();
     
     let mut current_task_idx = 0;
@@ -178,6 +195,6 @@ pub fn toggle_task_in_file(file_path: String, task_index: usize, completed: bool
         }
     }
 
-    fs::write(&path, lines.join("\n")).map_err(|e| e.to_string())?;
+    fshelper::write_string_to_file(&path, &lines.join("\n"))?;
     Ok(())
 }

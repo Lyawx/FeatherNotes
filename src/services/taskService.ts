@@ -17,6 +17,8 @@ export interface Milestone {
 export interface TaskProject {
   name: string;
   path: string;
+  createdAt: number;
+  updatedAt: number;
   milestones: Milestone[];
 }
 

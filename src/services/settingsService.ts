@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { open } from '@tauri-apps/plugin-dialog';
 
 export interface OllamaSettings {
   ollama_default_path: string;
@@ -27,5 +28,28 @@ export const settingsService = {
 
   async saveSettings(settings: AppSettings): Promise<void> {
     await invoke('save_app_settings', { settings });
+  },
+
+  async browsePath(target: 'ollama' | 'markdown', appSettings: AppSettings): Promise<AppSettings> {
+  try {
+    const isDirectory = target === 'markdown';
+
+    const selected = await open({
+      multiple: false,
+      directory: isDirectory
+    });
+
+    if (selected && typeof selected === 'string') {
+      if (target === 'ollama') {
+        appSettings.ollama.ollama_custom_path = selected;
+      } else {
+        appSettings.markdown.markdown_custom_path = selected;
+      }
+    }
+  } catch (err) {
+    console.error(`Failed to browse path for ${target}:`, err);
   }
+  return appSettings
+},
 };
+

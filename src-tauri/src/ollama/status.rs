@@ -1,14 +1,23 @@
 use std::process::Command;
-use tauri::{AppHandle};
-use crate::settings::load_app_settings; //
+use tauri::AppHandle;
+use crate::settings::load_app_settings;
+use std::sync::OnceLock;
+
+// Optimisation : Utilisation d'un client unique pour éviter les allocations à chaque heartbeat
+static STATUS_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+
+fn get_status_client() -> &'static reqwest::Client {
+    STATUS_CLIENT.get_or_init(|| {
+        reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(1))
+            .build()
+            .unwrap()
+    })
+}
 
 #[tauri::command]
 pub async fn check_ollama_status() -> Result<bool, String> {
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(1))
-        .build()
-        .map_err(|e| e.to_string())?;
-
+    let client = get_status_client();
     let res = client.get("http://localhost:11434/").send().await;
     match res {
         Ok(response) => Ok(response.status().is_success()),
@@ -105,7 +114,8 @@ pub async fn stop_ollama_process() -> Result<(), String> {
             .spawn();
     }
 
-    // Small delay to let the OS release the process and the network port
-    std::thread::sleep(std::time::Duration::from_millis(500));
+    // Optimisation : Utilisation de tokio::time::sleep à la place de std::thread::sleep
+    // pour ne pas bloquer le thread du pool asynchrone de l'application.
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     Ok(())
 }

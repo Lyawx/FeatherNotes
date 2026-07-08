@@ -1,32 +1,49 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { mainService } from '../services/mainService';
 import { settingsService } from '../services/settingsService';
-import type { TaskProject, Milestone } from '../services/taskService';
+import type { TaskProject, Milestone } from '../services/mainService';
+import SidebarFiles from './SidebarFiles.vue';
 
 const projects = ref<TaskProject[]>([]);
+const sortedProjectsList = ref<TaskProject[]>([]);
 const expandedProjects = ref<Record<string, boolean>>({});
 const expandedMilestones = ref<Record<string, boolean>>({});
-
+const selectedProjects = ref<Record<string, boolean>>({});
 const urgentThresholdDays = ref(1);
 const warningThresholdDays = ref(3);
 
+const updateSortedList = (newList: TaskProject[]) => {
+  sortedProjectsList.value = newList;
+};
+
 const loadTasks = async () => {
   try {
-    projects.value = await mainService.tasks.getTasksStructure();
+    const data = await mainService.tasks.getTasksStructure();
+    projects.value = data;
+
+    data.forEach(project => {
+      if (selectedProjects.value[project.path] === undefined) {
+        selectedProjects.value[project.path] = true;
+      }
+    });
   } catch (err) {
-    console.error('Erreur lors du chargement des tâches:', err);
+    console.error('Error loading tasks:', err);
   }
 };
+
+const filteredProjects = computed(() => {
+  const baseList = sortedProjectsList.value.length > 0 ? sortedProjectsList.value : projects.value;
+  return baseList.filter((project: TaskProject) => selectedProjects.value[project.path]);
+});
 
 const loadSettings = async () => {
   try {
     const settings = await settingsService.loadSettings();
-    // On utilise les clés en snake_case du Rust
     urgentThresholdDays.value = settings.urgent_threshold_days;
     warningThresholdDays.value = settings.warning_threshold_days;
   } catch (err) {
-    console.error('Erreur lors du chargement des configurations de priorités:', err);
+    console.error('Error loading priority settings:', err);
   }
 };
 
@@ -63,7 +80,7 @@ const handleTaskToggle = async (filePath: string, taskId: number, completed: boo
   try {
     await mainService.tasks.toggleTask(filePath, taskId, completed);
   } catch (err) {
-    console.error('Erreur lors de la modification de la tâche:', err);
+    console.error('Error toggling task:', err);
     await loadTasks();
   }
 };
@@ -111,93 +128,192 @@ const getProjectProgress = (project: TaskProject): number => {
   if (totalTasks === 0) return 0;
   return Math.round((completedTasks / totalTasks) * 100);
 };
+
+const rename = async ({ item, newName }: { item: any, newName: string }) => {
+  try {
+    if (!newName.trim()) return;
+    
+    const wasSelected = selectedProjects.value[item.path];
+    const isExpanded = expandedProjects.value[item.path];
+    
+    await mainService.item.renameItem(item.path, newName);
+    await loadTasks();
+    
+    const updatedProject = projects.value.find(p => p.name === newName || p.path.endsWith(newName));
+    if (updatedProject) {
+      if (wasSelected !== undefined) {
+        selectedProjects.value[updatedProject.path] = wasSelected;
+        delete selectedProjects.value[item.path];
+      }
+      if (isExpanded !== undefined) {
+        expandedProjects.value[updatedProject.path] = isExpanded;
+        delete expandedProjects.value[item.path];
+      }
+    }
+  } catch (error) {
+    console.error("Error renaming project:", error);
+  }
+};
+
+const PRIORITY_WEIGHTS = {
+  overdue: 4,
+  urgent: 3,
+  warning: 2,
+  normal: 1
+};
+
+const getProjectPriorityScore = (project: TaskProject): number => {
+  const activeMilestones = project.milestones.filter(m => m.date && !isMilestoneCompleted(m));
+
+  return activeMilestones.reduce((sum, milestone) => {
+    const priority = calculatePriority(milestone.date);
+    return sum + PRIORITY_WEIGHTS[priority];
+  }, 0);
+};
+
+const taskCustomSorts = {
+  priority: {
+    label: 'Priority score',
+    compareFn: (a: TaskProject, b: TaskProject) => {
+      const scoreA = getProjectPriorityScore(a);
+      const scoreB = getProjectPriorityScore(b);
+
+      if (scoreB !== scoreA) return scoreB - scoreA;
+
+      return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+    }
+  }
+};
+
+const createNewProject = async () => {
+  const fileName = prompt("File name :");
+  if (!fileName) return;
+  try {
+    const dirPath = await mainService.item.getDirectoryPath('Tasks');
+    const separator = dirPath.includes("/") ? "/" : "\\";
+    let fullPath = `${dirPath}${separator}${fileName}`;
+    await mainService.item.createDir(fullPath);
+    await loadTasks();
+  } catch (err) {
+    console.error("Erreur :", err);
+  }
+};
 </script>
 
 <template>
-  <div id="tasks-panel" class="tab-panel">
-    <h1>Project Tasks</h1>
-    <p class="tab-desc">Manage your milestones and checkboxes directly synced with your markdown vault.</p>
+  <div id="tasks-wrapper">
+    <SidebarFiles 
+      @create-click="createNewProject" 
+      title="Displayed Projects"
+      :items="projects"
+      :customSorts="taskCustomSorts"
+      emptyMessage="No project files found in the Tasks folder."
+      emptyHint="Add a new project to see it displayed here."
+      @rename="rename"
+      @update:sorted="updateSortedList"
+    >
+      <template #item="{ item: project }">
+        <div class="project-filter-item">
+          <label class="filter-label" @click.stop>
+            <input type="checkbox" v-model="selectedProjects[project.path]" class="eye-checkbox" />
 
-    <div v-if="projects.length === 0" class="empty-state">
-      No projects or task files found.
-    </div>
+            <span class="eye-icon-wrapper">
+              <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
 
-    <div v-else class="projects-list">
-      <div v-for="project in projects" :key="project.path" class="project-container">
-        
-        <div class="project-header" @click="toggleProject(project.path)">
-          <span class="chevron" :class="{ 'rotated': expandedProjects[project.path] }">▶</span>
-          <h2 class="project-title">{{ project.name }}</h2>
-          
-          <div class="progress-wrapper project-progress-layout">
-            <div class="progress-bar-container-large">
-              <div class="progress-bar-fill" :style="{ width: getProjectProgress(project) + '%' }"></div>
-            </div>
-            <span class="progress-text-large">{{ getProjectProgress(project) }}%</span>
-          </div>
+              <svg class="eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                <line x1="1" y1="1" x2="23" y2="23" />
+              </svg>
+            </span>
+
+            <span class="filter-text" :class="{ 'text-muted': !selectedProjects[project.path] }">
+              {{ project.name }}
+            </span>
+          </label>
         </div>
+      </template>
+    </SidebarFiles>
 
-        <div v-show="expandedProjects[project.path]" class="milestones-list">
-          <div v-for="milestone in project.milestones" :key="milestone.path" class="milestone-container">
-            
-            <div class="milestone-header" @click="toggleMilestone(milestone.path)">
-              <span class="chevron" :class="{ 'rotated': expandedMilestones[milestone.path] }">▶</span>
-              
-              <div class="milestone-progress-circle-wrapper">
-                <svg class="progress-circle" viewBox="0 0 36 36">
-                  <path class="circle-bg"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                  <path class="circle-fill"
-                    :stroke-dasharray="getMilestoneProgress(milestone) + ', 100'"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                </svg>
-                <span class="circle-text">{{ getMilestoneProgress(milestone) }}%</span>
+    <div id="tasks-panel" class="tab-panel">
+      <h1>Project Tasks</h1>
+      <p class="tab-desc">Manage your milestones and checkboxes directly synced with your markdown vault.</p>
+
+      <div v-if="filteredProjects.length === 0" class="empty-state">
+        No project selected or found.
+      </div>
+
+      <div v-else class="projects-list">
+        <div v-for="project in filteredProjects" :key="project.path" class="project-container">
+
+          <div class="project-header" @click="toggleProject(project.path)">
+            <span class="chevron" :class="{ 'rotated': expandedProjects[project.path] }">▶</span>
+            <h2 class="project-title">{{ project.name }}</h2>
+            <span class="badge-project-score" v-if="getProjectPriorityScore(project) > 0">
+              {{ getProjectPriorityScore(project) }}
+            </span>
+
+            <div class="progress-wrapper project-progress-layout">
+              <div class="progress-bar-container-large">
+                <div class="progress-bar-fill" :style="{ width: getProjectProgress(project) + '%' }"></div>
               </div>
-
-              <span v-if="milestone.date && !isMilestoneCompleted(milestone)" 
-                    class="badge-priority" 
-                    :class="calculatePriority(milestone.date)">
-                {{ calculatePriority(milestone.date) }}
-              </span>
-
-              <h3 class="milestone-title">{{ milestone.name }}</h3>
-                            
-              <span v-if="milestone.date" class="badge-title-date">
-                {{ milestone.date }}
-              </span>
+              <span class="progress-text-large">{{ getProjectProgress(project) }}%</span>
             </div>
+          </div>
 
-            <div v-show="expandedMilestones[milestone.path]" class="tasks-list">
-              <div v-for="task in milestone.tasks" :key="task.id" class="task-row">
-                <label class="task-checkbox-wrapper">
-                  <input 
-                    type="checkbox" 
-                    :checked="task.completed" 
-                    @change="handleTaskToggle(milestone.path, task.id, !task.completed)"
-                  />
+          <div v-show="expandedProjects[project.path]" class="milestones-list">
+            <div v-for="milestone in project.milestones" :key="milestone.path" class="milestone-container">
 
-                  <span v-if="task.due_date && !task.completed" 
-                        class="badge-priority" 
-                        :class="calculatePriority(task.due_date)">
-                    {{ calculatePriority(task.due_date) }}
-                  </span>
+              <div class="milestone-header" @click="toggleMilestone(milestone.path)">
+                <span class="chevron" :class="{ 'rotated': expandedMilestones[milestone.path] }">▶</span>
 
-                  <span class="task-text" :class="{ 'task-done': task.completed }">
-                    {{ task.text }}
-                  </span>
+                <div class="milestone-progress-circle-wrapper">
+                  <svg class="progress-circle" viewBox="0 0 36 36">
+                    <path class="circle-bg"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <path class="circle-fill" :stroke-dasharray="getMilestoneProgress(milestone) + ', 100'"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  </svg>
+                  <span class="circle-text">{{ getMilestoneProgress(milestone) }}%</span>
+                </div>
 
-                  <span v-if="task.due_date" class="badge-date date" :class="{ 'date-done': task.completed }">
-                    {{ task.due_date }}
-                  </span>
-                </label>
+                <span v-if="milestone.date && !isMilestoneCompleted(milestone)" class="badge-priority"
+                  :class="calculatePriority(milestone.date)">
+                  {{ calculatePriority(milestone.date) }}
+                </span>
+
+                <h3 class="milestone-title">{{ milestone.name }}</h3>
+
+                <span v-if="milestone.date" class="badge-title-date">
+                  {{ milestone.date }}
+                </span>
               </div>
-              <div v-if="milestone.tasks.length === 0" class="empty-tasks">
-                No checkboxes found in this file.
+
+              <div v-show="expandedMilestones[milestone.path]" class="tasks-list">
+                <div v-for="task in milestone.tasks" :key="task.id" class="task-row">
+                  <label class="task-checkbox-wrapper">
+                    <input type="checkbox" :checked="task.completed"
+                      @change="handleTaskToggle(milestone.path, task.id, !task.completed)" />
+                    <span v-if="task.due_date && !task.completed" class="badge-priority"
+                      :class="calculatePriority(task.due_date)">
+                      {{ calculatePriority(task.due_date) }}
+                    </span>
+                    <span class="task-text" :class="{ 'task-done': task.completed }">
+                      {{ task.text }}
+                    </span>
+                    <span v-if="task.due_date" class="badge-date date" :class="{ 'date-done': task.completed }">
+                      {{ task.due_date }}
+                    </span>
+                  </label>
+                </div>
+                <div v-if="milestone.tasks.length === 0" class="empty-tasks">
+                  No checkboxes found in this file.
+                </div>
               </div>
+
             </div>
-
           </div>
         </div>
       </div>
@@ -206,6 +322,16 @@ const getProjectProgress = (project: TaskProject): number => {
 </template>
 
 <style scoped>
+#tasks-wrapper {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 100%;
+}
+
+#tasks-panel {
+  width: 100%;
+}
 
 .project-container {
   background: var(--bg-01);
@@ -227,7 +353,18 @@ const getProjectProgress = (project: TaskProject): number => {
 .project-title {
   margin: 0;
   font-size: 1.15rem;
+  font-weight: 600;
   color: var(--text-00);
+}
+
+.badge-project-score {
+  font-size: 1.15rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--color-red, #ef4444);
+  margin-left: 1rem;
+  display: inline-flex;
+  align-items: center;
 }
 
 .chevron {
@@ -330,112 +467,85 @@ const getProjectProgress = (project: TaskProject): number => {
   text-decoration: line-through;
 }
 
-.badge-priority {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 0.1rem 0.35rem;
-  border-radius: 3px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.badge-priority.overdue {
-  background-color: var(--text-02);
-  color: var(--bg-02);
-}
-
-.badge-priority.urgent {
-  background-color: var(--color-red-surface);
-  color: var(--color-red);
-  border: 1px solid var(--color-red);
-}
-
-.badge-priority.warning {
-  background-color: var(--color-yellow-surface);
-  color: var(--color-yellow);
-  border: 1px solid var(--color-yellow);
-}
-
-.badge-priority.normal {
-  background-color: var(--color-blue-surface);
-  color: var(--color-blue);
-  border: 1px solid var(--color-blue);
-}
-
-.progress-wrapper {
+.project-filter-item {
+  width: 100%;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
 }
 
-/* Barre de progression Projet (Plus grande et épaisse) */
-.project-progress-layout {
-  margin-left: auto;
-  width: 200px;
+.filter-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  cursor: pointer;
+  padding: 0.2rem 0;
 }
 
-.progress-bar-container-large {
-  flex-grow: 1;
-  height: 10px;
-  background-color: var(--bg-00);
-  border-radius: 5px;
-  overflow: hidden;
-  border: var(--border-width) solid var(--bg-active);
+.filter-label * {
+  transition: all 0.2s ease;
 }
 
-.progress-bar-fill {
-  height: 100%;
-  background-color: var(--color-blue);
-  border-radius: 5px;
-  transition: width 0.3s ease;
-}
-
-.progress-text-large {
-  font-size: 0.85rem;
-  font-family: monospace;
-  font-weight: 600;
+.filter-text {
+  font-size: 0.9rem;
   color: var(--text-01);
-  min-width: 38px;
-  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.2; 
+  transition: color 0.2s ease;
 }
 
-/* Cercle de progression pour la Milestone */
-.milestone-progress-circle-wrapper {
-  position: relative;
+.project-filter-item:hover {
+  background-color: var(--bg-02);
+}
+
+.filter-text.text-muted {
+  color: var(--text-02);
+  opacity: 0.6;
+}
+
+.eye-checkbox {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.eye-icon-wrapper {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
+  color: var(--text-02);
+  cursor: pointer;
 }
 
-.progress-circle {
+.eye-icon-wrapper svg {
   width: 100%;
   height: 100%;
-  transform: rotate(-90deg);
+  display: block;
 }
 
-.circle-bg {
-  fill: none;
-  stroke: var(--bg-00);
-  stroke-width: 3.8;
+.eye-checkbox ~ .eye-icon-wrapper .eye-closed {
+  display: block;
+}
+.eye-checkbox ~ .eye-icon-wrapper .eye-open {
+  display: none;
 }
 
-.circle-fill {
-  fill: none;
-  stroke: var(--color-blue);
-  stroke-width: 3.8;
-  stroke-linecap: round;
-  transition: stroke-dasharray 0.3s ease;
+.eye-checkbox:checked ~ .eye-icon-wrapper .eye-closed {
+  display: none;
+}
+.eye-checkbox:checked ~ .eye-icon-wrapper .eye-open {
+  display: block;
+  color: var(--text-00);
 }
 
-.circle-text {
-  position: absolute;
-  font-size: 0.6rem;
-  font-family: monospace;
-  font-weight: 600;
-  color: var(--text-02);
+.filter-label:hover * {
+  color: var(--color-blue);
 }
 </style>

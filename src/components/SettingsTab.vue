@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import { open } from '@tauri-apps/plugin-dialog';
+
 import { mainService } from "../services/mainService";
-import type { AppSettings } from "../services/settingsService";
-import type { OllamaStatus } from "../services/ollamaService";
+import type { AppSettings, OllamaStatus } from "../services/mainService";
 
 const props = defineProps<{ ollamaStatus: string }>();
 const emit = defineEmits<{ (e: 'updateStatus', status: OllamaStatus): void }>();
@@ -23,6 +22,10 @@ const appSettings = ref<AppSettings>({
     markdown_use_custom_path: false
   }
 });
+
+const browsePath = async(target: 'ollama' | 'markdown') => {
+  appSettings.value = await mainService.settings.browsePath(target, appSettings.value);
+}
 
 const availableThemes = ref<string[]>([]);
 
@@ -75,27 +78,7 @@ const stopOllama = async () => {
   } catch (err) { console.error(err); }
 };
 
-const browsePath = async (target: 'ollama' | 'markdown') => {
-  try {
-    const isDirectory = target === 'markdown';
 
-    const selected = await open({
-      multiple: false,
-      directory: isDirectory
-    });
-
-    if (selected && typeof selected === 'string') {
-      if (target === 'ollama') {
-        appSettings.value.ollama.ollama_custom_path = selected;
-      } else {
-        appSettings.value.markdown.markdown_custom_path = selected;
-      }
-      await saveSettings();
-    }
-  } catch (err) {
-    console.error(`Failed to browse path for ${target}:`, err);
-  }
-};
 </script>
 
 <template>
@@ -107,15 +90,17 @@ const browsePath = async (target: 'ollama' | 'markdown') => {
       <h3>Interface Theme</h3>
       <hr class="ui-divider" />
       <div class="setting-row">
-        <select 
+        <div class="select-container custom-select">
+          <select 
           v-model="appSettings.theme" 
           @change="handleThemeChange" 
-          class="text-input-field select-dropdown"
+          class="dropdown"
         >
           <option v-for="theme in availableThemes" :key="theme" :value="theme">
             {{ theme }}
           </option>
         </select>
+        </div>
       </div>
     </div>
 
@@ -253,10 +238,8 @@ const browsePath = async (target: 'ollama' | 'markdown') => {
   display: flex;
   gap: 1rem;
 }
-
-.select-dropdown {
-  width: 100%;
-  max-width: 300px;
-  cursor: pointer;
+.custom-select{
+  max-width: 20%;
 }
+
 </style>

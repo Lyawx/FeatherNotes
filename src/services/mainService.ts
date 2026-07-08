@@ -1,15 +1,14 @@
-// Import sibling services from the same directory
 import { settingsService } from "./settingsService";
 import { ollamaService } from "./ollamaService";
 import { logbookService } from "./logbookService";  
 import { themeService } from "./themeService.ts"
-// Import window positioning capabilities from the Tauri plugin
+import { itemService } from "./itemService.ts";
 import { moveWindow, Position } from '@tauri-apps/plugin-positioner';
 import { taskService } from "./taskService.ts";
-
-// Re-export types so components only need to import mainService
 export type { AppSettings } from "./settingsService";
 export type { OllamaStatus } from "./ollamaService";
+export type { FileNode } from "../services/logbookService";
+export type { TaskProject, Milestone } from '../services/taskService';
 
 export const mainService = {
   settings: settingsService,
@@ -17,9 +16,8 @@ export const mainService = {
   logbook: logbookService,
   themes: themeService,
   tasks: taskService,
+  item: itemService,
 
-  // --- WINDOW MANAGEMENT ---
-  // Centers the primary application window viewport on the desktop screen
   async centerWindow(): Promise<void> {
     try {
       await moveWindow(Position.Center);

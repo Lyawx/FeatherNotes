@@ -1,6 +1,5 @@
-use std::path::PathBuf;
 use serde::{de::DeserializeOwned, Serialize};
-use crate::helper::fshelper;
+use crate::helper::fshelper::{self, PathBuf};
 
 pub fn save_json<T: Serialize>(path: &PathBuf, data: &T) -> Result<(), String> {
     fshelper::ensure_parent_dir(path)?;

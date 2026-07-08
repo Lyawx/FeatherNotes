@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from "vue";
 import { mainService } from "../services/mainService";
-import type { OllamaStatus } from "../services/ollamaService";
+import type { OllamaStatus } from "../services/mainService";
 
 const props = defineProps<{ ollamaStatus: OllamaStatus }>();
 const emit = defineEmits<{ (e: 'triggerStart'): void }>();
@@ -41,7 +41,8 @@ const submitBrainDump = async () => {
     <div id="ai-assistant-panel" class="tab-panel">
         <div class="header-zone">
             <h1>AI Assistant</h1>
-            <p class="tab-desc">Dump your thoughts, raw ideas, or your entire day. The local AI will sort everything automatically.</p>
+            <p class="tab-desc">Dump your thoughts, raw ideas, or your entire day. The local AI will sort everything
+                automatically.</p>
         </div>
 
         <div id="ai-workspace-container">
@@ -59,13 +60,16 @@ const submitBrainDump = async () => {
                     </div>
 
                     <div class="controls-group">
-                        <select v-model="selectedModel" class="model-select"
-                            :disabled="ollamaStatus !== 'connected' || isProcessing">
-                            <option value="" disabled>Select a model...</option>
-                            <option v-for="model in installedModels" :key="model" :value="model">{{ model }}</option>
-                        </select>
+                        <div class="select-container">
+                            <select v-model="selectedModel" class="dropdown"
+                                :disabled="ollamaStatus !== 'connected' || isProcessing">
+                                <option value="" disabled>Select a model...</option>
+                                <option v-for="model in installedModels" :key="model" :value="model">{{ model }}
+                                </option>
+                            </select>
+                        </div>
 
-                        <button class="base-btn blue-btn" @click="submitBrainDump"
+                        <button class="base-btn blue-btn submit-brain-dump" @click="submitBrainDump"
                             :disabled="ollamaStatus !== 'connected' || !userInput.trim() || isProcessing">
                             Process Brain Dump
                         </button>
@@ -98,62 +102,57 @@ const submitBrainDump = async () => {
 </template>
 
 <style scoped>
-
 #ai-assistant-panel {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 #ai-workspace-container {
-  display: flex;
-  flex-direction: row;
-  gap: 1.5rem;
-  margin-top: 1.5rem;
-  height: 100%;
+    display: flex;
+    flex-direction: row;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+    height: 100%;
 }
 
 .ai-column {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 #brain-textarea {
-  resize: none;
-  height: 100%;
+    resize: none;
+    height: 100%;
 }
 
 #ai-result-box {
-  margin-bottom: 0;
-  height: 100%;
+    margin-bottom: 0;
+    height: 100%;
 }
 
 .action-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-left: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-left: 0.5rem;
 }
 
 .controls-group {
-  display: flex;
-  gap: 0.75rem;
-}
-
-.model-select {
-  background-color: var(--bg-00);
-  color: var(--text-00);
-  border: var(--border-width) solid var(--bg-02);
-  padding: 0.5rem;
-  border-radius: 6px;
-  font-family: inherit;
+    align-items: center;
+    display: flex;
+    gap: 0.75rem;
 }
 
 .preview-placeholder {
-  color: var(--text-02);
-  font-size: 0.9rem;
-  font-style: italic;
+    color: var(--text-02);
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+.submit-brain-dump {
+    flex-shrink: 0;
 }
 </style>
