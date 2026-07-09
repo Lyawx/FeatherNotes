@@ -108,6 +108,12 @@ onUnmounted(() => {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
 }
 
 body,
@@ -544,25 +550,33 @@ input:checked+.ui-toggle-slider:before {
   gap: 0.5rem;
 }
 
-.progress-wrapper {
+.project-header-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-shrink: 0;
+}
+
+.project-progress-layout {
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
 
 .progress-bar-container-large {
-  flex-grow: 1;
-  height: 10px;
+  width: 120px;
+  height: 8px;
   background-color: var(--bg-00);
-  border-radius: 5px;
+  border-radius: 4px;
   overflow: hidden;
-  border: var(--border-width) solid var(--bg-active);
+  border: var(--border-width) solid var(--bg-02);
 }
 
 .progress-bar-fill {
   height: 100%;
-  background-color: var(--color-blue);
-  border-radius: 5px;
+  background-color: var(--color-green, #10b981);
+  border-radius: 4px;
   transition: width 0.3s ease;
 }
 

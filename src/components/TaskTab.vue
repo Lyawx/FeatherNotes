@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, nextTick } from 'vue';
 import { mainService } from '../services/mainService';
 import { settingsService } from '../services/settingsService';
 import type { TaskProject, Milestone } from '../services/mainService';
@@ -12,6 +12,10 @@ const expandedMilestones = ref<Record<string, boolean>>({});
 const selectedProjects = ref<Record<string, boolean>>({});
 const urgentThresholdDays = ref(1);
 const warningThresholdDays = ref(3);
+
+const editingProjectPath = ref<string | null>(null);
+const tempProjectName = ref("");
+const renameInputRef = ref<HTMLInputElement | null>(null);
 
 const updateSortedList = (newList: TaskProject[]) => {
   sortedProjectsList.value = newList;
@@ -53,6 +57,7 @@ onMounted(async () => {
 });
 
 const toggleProject = (projectPath: string) => {
+  if (editingProjectPath.value === projectPath) return;
   expandedProjects.value[projectPath] = !expandedProjects.value[projectPath];
 };
 
@@ -129,30 +134,48 @@ const getProjectProgress = (project: TaskProject): number => {
   return Math.round((completedTasks / totalTasks) * 100);
 };
 
-const rename = async ({ item, newName }: { item: any, newName: string }) => {
+const startRename = async (project: TaskProject) => {
+  editingProjectPath.value = project.path;
+  tempProjectName.value = project.name;
+  await nextTick();
+  renameInputRef.value?.focus();
+  renameInputRef.value?.select();
+};
+
+const confirmRename = async (project: TaskProject) => {
+  const newName = tempProjectName.value.trim();
+  if (!newName || newName === project.name) {
+    editingProjectPath.value = null;
+    return;
+  }
+
   try {
-    if (!newName.trim()) return;
+    const wasSelected = selectedProjects.value[project.path];
+    const isExpanded = expandedProjects.value[project.path];
     
-    const wasSelected = selectedProjects.value[item.path];
-    const isExpanded = expandedProjects.value[item.path];
-    
-    await mainService.item.renameItem(item.path, newName);
+    await mainService.item.renameItem(project.path, newName);
     await loadTasks();
     
     const updatedProject = projects.value.find(p => p.name === newName || p.path.endsWith(newName));
     if (updatedProject) {
       if (wasSelected !== undefined) {
         selectedProjects.value[updatedProject.path] = wasSelected;
-        delete selectedProjects.value[item.path];
+        delete selectedProjects.value[project.path];
       }
       if (isExpanded !== undefined) {
         expandedProjects.value[updatedProject.path] = isExpanded;
-        delete expandedProjects.value[item.path];
+        delete expandedProjects.value[project.path];
       }
     }
   } catch (error) {
     console.error("Error renaming project:", error);
+  } finally {
+    editingProjectPath.value = null;
   }
+};
+
+const cancelRename = () => {
+  editingProjectPath.value = null;
 };
 
 const PRIORITY_WEIGHTS = {
@@ -209,26 +232,22 @@ const createNewProject = async () => {
       :customSorts="taskCustomSorts"
       emptyMessage="No project files found in the Tasks folder."
       emptyHint="Add a new project to see it displayed here."
-      @rename="rename"
       @update:sorted="updateSortedList"
     >
       <template #item="{ item: project }">
         <div class="project-filter-item">
           <label class="filter-label" @click.stop>
             <input type="checkbox" v-model="selectedProjects[project.path]" class="eye-checkbox" />
-
             <span class="eye-icon-wrapper">
               <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                 <circle cx="12" cy="12" r="3" />
               </svg>
-
               <svg class="eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
                 <line x1="1" y1="1" x2="23" y2="23" />
               </svg>
             </span>
-
             <span class="filter-text" :class="{ 'text-muted': !selectedProjects[project.path] }">
               {{ project.name }}
             </span>
@@ -250,54 +269,74 @@ const createNewProject = async () => {
 
           <div class="project-header" @click="toggleProject(project.path)">
             <span class="chevron" :class="{ 'rotated': expandedProjects[project.path] }">▶</span>
-            <h2 class="project-title">{{ project.name }}</h2>
-            <span class="badge-project-score" v-if="getProjectPriorityScore(project) > 0">
-              {{ getProjectPriorityScore(project) }}
-            </span>
+            
+            <div v-if="editingProjectPath === project.path" class="project-rename-container" @click.stop>
+              <input 
+                ref="renameInputRef"
+                v-model="tempProjectName"
+                class="project-rename-input"
+                @keyup.enter="confirmRename(project)"
+                @keyup.esc="cancelRename"
+              />
+              <button class="project-rename-cancel-btn" @click="cancelRename">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            <h2 v-else class="project-title">{{ project.name }}</h2>
 
-            <div class="progress-wrapper project-progress-layout">
-              <div class="progress-bar-container-large">
-                <div class="progress-bar-fill" :style="{ width: getProjectProgress(project) + '%' }"></div>
+            <button 
+              v-if="editingProjectPath !== project.path"
+              class="project-rename-btn" 
+              @click.stop="startRename(project)"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
+                <path fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
+              </svg>
+            </button>
+
+            <div class="project-header-right">
+              <span class="badge-project-score" v-if="getProjectPriorityScore(project) > 0">
+                Priority score : {{ getProjectPriorityScore(project) }}
+              </span>
+
+              <div class="project-progress-layout">
+                <span class="progress-text-large">{{ getProjectProgress(project) }}%</span>
+                <div class="progress-bar-container-large">
+                  <div class="progress-bar-fill" :style="{ width: getProjectProgress(project) + '%' }"></div>
+                </div>
               </div>
-              <span class="progress-text-large">{{ getProjectProgress(project) }}%</span>
             </div>
           </div>
 
           <div v-show="expandedProjects[project.path]" class="milestones-list">
             <div v-for="milestone in project.milestones" :key="milestone.path" class="milestone-container">
-
               <div class="milestone-header" @click="toggleMilestone(milestone.path)">
                 <span class="chevron" :class="{ 'rotated': expandedMilestones[milestone.path] }">▶</span>
 
                 <div class="milestone-progress-circle-wrapper">
                   <svg class="progress-circle" viewBox="0 0 36 36">
-                    <path class="circle-bg"
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                    <path class="circle-fill" :stroke-dasharray="getMilestoneProgress(milestone) + ', 100'"
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <path class="circle-fill" :stroke-dasharray="getMilestoneProgress(milestone) + ', 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                   </svg>
                   <span class="circle-text">{{ getMilestoneProgress(milestone) }}%</span>
                 </div>
 
-                <span v-if="milestone.date && !isMilestoneCompleted(milestone)" class="badge-priority"
-                  :class="calculatePriority(milestone.date)">
+                <span v-if="milestone.date && !isMilestoneCompleted(milestone)" class="badge-priority" :class="calculatePriority(milestone.date)">
                   {{ calculatePriority(milestone.date) }}
                 </span>
 
                 <h3 class="milestone-title">{{ milestone.name }}</h3>
-
-                <span v-if="milestone.date" class="badge-title-date">
-                  {{ milestone.date }}
-                </span>
+                <span v-if="milestone.date" class="badge-title-date">{{ milestone.date }}</span>
               </div>
 
               <div v-show="expandedMilestones[milestone.path]" class="tasks-list">
                 <div v-for="task in milestone.tasks" :key="task.id" class="task-row">
                   <label class="task-checkbox-wrapper">
-                    <input type="checkbox" :checked="task.completed"
-                      @change="handleTaskToggle(milestone.path, task.id, !task.completed)" />
-                    <span v-if="task.due_date && !task.completed" class="badge-priority"
-                      :class="calculatePriority(task.due_date)">
+                    <input type="checkbox" :checked="task.completed" @change="handleTaskToggle(milestone.path, task.id, !task.completed)" />
+                    <span v-if="task.due_date && !task.completed" class="badge-priority" :class="calculatePriority(task.due_date)">
                       {{ calculatePriority(task.due_date) }}
                     </span>
                     <span class="task-text" :class="{ 'task-done': task.completed }">
@@ -312,9 +351,9 @@ const createNewProject = async () => {
                   No checkboxes found in this file.
                 </div>
               </div>
-
             </div>
           </div>
+
         </div>
       </div>
     </div>
@@ -348,6 +387,15 @@ const createNewProject = async () => {
   cursor: pointer;
   background: var(--bg-02);
   user-select: none;
+  gap: 0.5rem;
+}
+
+.project-header-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-shrink: 0;
 }
 
 .project-title {
@@ -357,21 +405,85 @@ const createNewProject = async () => {
   color: var(--text-00);
 }
 
+.project-rename-btn {
+  cursor: pointer;
+  background: none;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-02);
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.1s ease;
+  padding: 6px;
+  border-radius: 4px;
+}
+
+.project-header:hover .project-rename-btn {
+  opacity: 1;
+}
+
+.project-rename-btn:hover {
+  color: var(--color-blue);
+  background-color: var(--bg-01);
+}
+
+.project-rename-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-grow: 1;
+  max-width: 450px;
+}
+
+.project-rename-input {
+  font-size: 1.15rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--text-00);
+  background: var(--bg-00);
+  border: 1px solid var(--color-blue);
+  border-radius: 4px;
+  padding: 2px 8px;
+  outline: none;
+  flex-grow: 1;
+  width: 100%;
+}
+
+.project-rename-cancel-btn {
+  background: none;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-02);
+  padding: 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.project-rename-cancel-btn:hover {
+  color: var(--color-red, #ef4444);
+  background-color: var(--bg-01);
+}
+
 .badge-project-score {
   font-size: 1.15rem;
   font-weight: 600;
   font-family: inherit;
-  color: var(--color-red, #ef4444);
-  margin-left: 1rem;
+  color: var(--color-blue);
   display: inline-flex;
   align-items: center;
+  white-space: nowrap;
 }
 
 .chevron {
   font-size: 0.75rem;
-  margin-right: 0.75rem;
+  margin-right: 0.25rem;
   transition: transform 0.2s ease;
   color: var(--text-02);
+  flex-shrink: 0;
 }
 
 .chevron.rotated {
@@ -547,5 +659,36 @@ const createNewProject = async () => {
 
 .filter-label:hover * {
   color: var(--color-blue);
+}
+
+.project-progress-layout {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.progress-bar-container-large {
+  width: 120px;
+  height: 8px;
+  background-color: var(--bg-00);
+  border-radius: 4px;
+  overflow: hidden;
+  border: var(--border-width) solid var(--bg-02);
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background-color: var(--color-green, #10b981);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progress-text-large {
+  font-size: 0.85rem;
+  font-family: monospace;
+  font-weight: 600;
+  color: var(--text-01);
+  min-width: 38px;
+  text-align: right;
 }
 </style>

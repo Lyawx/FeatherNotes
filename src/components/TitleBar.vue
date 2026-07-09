@@ -39,26 +39,37 @@ const closeWindow = async () => {
 
 <style scoped>
 .custom-titlebar {
+  position: absolute;
+  width: 100%;
   height: 32px;
-  background: var(--bg-01);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  background: transparent;
+  display: grid;
+  /* 3 colonnes : gauche (1fr), centre (auto), droite (1fr) */
+  grid-template-columns: 1fr max-content 1fr;
+  align-items: center; /* Centre verticalement tout le monde */
   user-select: none;
-  border-bottom: var(--border-width) solid var(--bg-02);
+}
+
+/* On crée un espace vide à gauche pour équilibrer la grille */
+.custom-titlebar::before {
+  content: "";
+  grid-column: 1;
 }
 
 .titlebar-logo {
-  padding-left: 12px;
+  grid-column: 2;
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-01);
-  pointer-events: none; /* Évite de bloquer le drag sur le texte */
+  pointer-events: none;
+  text-align: center;
 }
 
 .titlebar-actions {
+  grid-column: 3;
   display: flex;
   height: 100%;
+  justify-self: end; /* Pousse les boutons tout à droite de la colonne 3 */
 }
 
 .titlebar-btn {

@@ -123,29 +123,29 @@ onMounted(() => {
 
     <main class="file-content">
       <div v-if="activeFile" class="content-wrapper">
-        <div class="note-actions">
+        
+        <div v-if="!isEditing" class="note-actions">
           <span class="file-title">{{ activeFile.name }}</span>
-          <button v-if="!isEditing" @click="startEditing" class="base-btn">
+          <button @click="startEditing" class="base-btn">
             <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
               <title>pen</title>
               <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
             </svg>
           </button>
-          <div v-else class="edit-buttons-group">
-            <button @click="saveChanges" class="base-btn green-btn">
-              <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
-                <title>save-line</title>
-                <path fill="currentColor"
-                  d="M7 19v-6h10v6h2V7.828L16.172 5H5v14zM4 3h13l4 4v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1m5 12v4h6v-4z" />
-              </svg>
-            </button>
-            <button @click="isEditing = false" class="base-btn red-btn">Annuler</button>
-          </div>
         </div>
 
-        <hr class="ui-divider" style="margin-bottom: 1.5rem;" />
-        <MarkdownEditor v-if="isEditing" v-model="rawText" />
+        <hr v-if="!isEditing" class="ui-divider" style="margin-bottom: 1.5rem;" />
+        
+        <MarkdownEditor
+          v-if="isEditing"
+          v-model="rawText"
+          v-model:fileName="activeFile.name"
+          v-model:filePath="activeFile.path"
+          :enforce-md="true"
+          @save="saveChanges"
+          @cancel="isEditing = false"
+        />
         <div v-else class="markdown-body" v-html="renderedHtml"></div>
       </div>
 
@@ -163,13 +163,15 @@ onMounted(() => {
 }
 
 :deep(.item-row) {
-  padding: 0.65rem 0.85rem;
+  padding: 0;
   border-radius: 8px;
   color: var(--text-01);
   font-size: 0.95rem;
   transition: all 0.2s;
   cursor: pointer;
+  display: flex;
 }
+
 
 :deep(.item-row:hover) {
   background-color: var(--bg-02);
@@ -184,9 +186,11 @@ onMounted(() => {
 
 .file-item-trigger {
   width: 100%;
+  padding: 0.65rem 0.85rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: block;
 }
 
 .file-content {

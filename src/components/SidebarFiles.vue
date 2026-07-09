@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="T extends { path: string, name: string, createdAt?: string | Date | number, updatedAt?: string | Date | number }">
-import { ref, nextTick, computed, watch } from 'vue';
+import { ref, computed, watch } from 'vue';
 
 type SortKey = 'alpha' | 'created' | 'updated' | string;
 
@@ -19,13 +19,9 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'create-click'): void;
-  (e: 'rename', payload: { item: T, newName: string }): void;
   (e: 'update:sorted', payload: any[]): void;
 }>();
 
-const editingId = ref<string | null>(null);
-const tempName = ref("");
-const inputRef = ref<HTMLInputElement | null>(null);
 const currentSort = ref<SortKey>('alpha');
 const isDirectionNormal = ref<boolean>(true);
 
@@ -69,25 +65,6 @@ const startCreate = () => emit('create-click');
 
 const toggleDirection = () => {
   isDirectionNormal.value = !isDirectionNormal.value;
-};
-
-const startEdit = async (item: T) => {
-  editingId.value = item.path;
-  tempName.value = item.name.replace('.md', '');
-  await nextTick();
-  inputRef.value?.focus();
-  inputRef.value?.select();
-};
-
-const confirm = (item: T) => {
-  if (tempName.value.trim()) {
-    emit('rename', { item, newName: tempName.value });
-  }
-  editingId.value = null;
-};
-
-const cancel = () => {
-  editingId.value = null;
 };
 
 watch(sortedItems, (newVal) => {
@@ -135,32 +112,10 @@ watch(sortedItems, (newVal) => {
     <div v-else class="file-list">
       <div v-for="item in sortedItems" :key="item.path" class="item-row">
         <div class="name-container">
-          <input 
-            v-if="editingId === item.path"
-            ref="inputRef"
-            v-model="tempName" 
-            @keyup.enter="confirm(item)"
-            @keyup.esc="cancel"
-            @blur="confirm(item)"
-            class="seamless-input"
-          />
-          <div v-else class="slot-wrapper">
+          <div class="slot-wrapper">
             <slot name="item" :item="item"></slot>
           </div>
         </div>
-
-        <button 
-          @click="editingId === item.path ? confirm(item) : startEdit(item)" 
-          class="action-btn"
-          :class="{ 'is-confirm': editingId === item.path }"
-        >
-          <svg v-if="editingId === item.path" xmlns="http://www.w3.org/2000/svg" width="1.1em" height="1.1em" viewBox="0 0 24 24">
-            <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 6L9 17l-5-5"/>
-          </svg>
-          <svg v-else xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
-            <path fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
-          </svg>
-        </button>
       </div>
     </div>
   </aside>
@@ -210,8 +165,8 @@ watch(sortedItems, (newVal) => {
 }
 
 .select-container {
-  flex: 1;
   position: relative;
+  flex: 1;
 }
 
 .select-container::after {
@@ -286,52 +241,24 @@ watch(sortedItems, (newVal) => {
   justify-content: space-between;
   gap: 8px;
   box-sizing: border-box;
+  user-select: none;
 }
 
 .name-container {
   flex: 1;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   display: flex;
   align-items: center;
 }
 
 .slot-wrapper {
-  width: 100%;
-  overflow: hidden;
-}
-
-.seamless-input {
-  width: 100%;
-  border: none;
-  background: transparent;
-  padding: 0;
-  margin: 0;
-  font-family: inherit;
-  font-size: inherit;
-  font-weight: inherit;
-  color: inherit;
-  outline: none;
-  box-sizing: border-box;
-}
-
-.action-btn {
-  cursor: pointer;
-  background: none;
-  border: none;
+  height: 100%;
   display: flex;
+  width: 100%;
   align-items: center;
-  justify-content: center;
-  color: var(--text-01);
-  transition: color 100ms ease-in-out;
-  padding: 4px;
-}
-
-.action-btn:hover {
-  color: var(--color-blue);
-}
-
-.action-btn.is-confirm {
-  color: var(--color-green, #28a745);
+  overflow: hidden;
 }
 
 .ui-divider {
@@ -340,4 +267,5 @@ watch(sortedItems, (newVal) => {
   margin: 0;
   width: 100%;
 }
+
 </style>
